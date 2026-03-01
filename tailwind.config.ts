@@ -12,6 +12,10 @@ export default {
         "2xl": "1400px",
       },
     },
+    fontFamily: {
+      sans: ['Inter', 'sans-serif'],
+      display: ['Space Grotesk', 'sans-serif'],
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",
@@ -46,6 +50,16 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        runner: {
+          DEFAULT: "hsl(var(--runner))",
+          foreground: "hsl(var(--runner-foreground))",
+        },
+        status: {
+          open: "hsl(var(--open))",
+          closed: "hsl(var(--closed))",
+          shopping: "hsl(var(--shopping))",
+          completed: "hsl(var(--completed))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
