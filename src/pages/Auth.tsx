@@ -45,7 +45,12 @@ const Auth = () => {
         },
       });
       if (error) {
-        if (error.message?.includes("not on the invite list") || error.message?.includes("check_allowed_email")) {
+        if (
+          error.message?.includes("not on the invite list") ||
+          error.message?.includes("check_allowed_email") ||
+          error.message?.includes("Database error saving new user") ||
+          error.status === 500
+        ) {
           toast.error("This email is not on the invite list. Please reach out to the admin for an invite.");
         } else {
           toast.error(error.message);
