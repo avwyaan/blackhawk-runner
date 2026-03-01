@@ -31,7 +31,11 @@ const Auth = () => {
         },
       });
       if (error) {
-        toast.error(error.message);
+        if (error.message?.includes('not on the invite list') || error.message?.includes('check_allowed_email')) {
+          toast.error("This email is not on the invite list. Please reach out to the admin for an invite.");
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.success("Check your email to confirm your account!");
       }
