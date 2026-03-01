@@ -53,9 +53,6 @@ const Groups = () => {
       .select()
       .single();
     if (error) { toast.error(error.message); return; }
-
-    // Add creator as member
-    await supabase.from("group_members").insert({ group_id: data.id, user_id: user.id });
     setNewGroupName("");
     setShowCreate(false);
     toast.success("Group created!");
