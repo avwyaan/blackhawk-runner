@@ -21,7 +21,6 @@ interface Run {
 interface Group {
   id: string;
   name: string;
-  invite_code: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -44,7 +43,7 @@ const Home = () => {
     const fetchData = async () => {
       const [{ data: profileData }, { data: groupsData }, { data: runsData }] = await Promise.all([
         supabase.from("profiles").select("display_name").eq("user_id", user.id).single(),
-        supabase.from("groups").select("id, name, invite_code"),
+        supabase.from("groups").select("id, name"),
         supabase.from("runs").select("*").order("created_at", { ascending: false }),
       ]);
       setProfile(profileData);
