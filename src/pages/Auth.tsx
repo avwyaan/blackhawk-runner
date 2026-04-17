@@ -115,6 +115,55 @@ const Auth = () => {
     setLoading(false);
   }, [resendTimer, email]);
 
+  if (showForgot) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
+              <ShoppingBag className="w-8 h-8" />
+            </div>
+            <h1 className="text-3xl font-bold font-display tracking-tight">Forgot Password?</h1>
+            <p className="text-muted-foreground">We'll send you a link to reset it</p>
+          </div>
+
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-display">Reset your password</CardTitle>
+              <CardDescription>Enter the email associated with your account</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
+                  {loading ? "Sending..." : "Send reset link"}
+                  {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+                </Button>
+              </form>
+
+              <button
+                onClick={() => setShowForgot(false)}
+                className="w-full text-center text-sm text-muted-foreground hover:underline mt-4"
+              >
+                ← Back to sign in
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (showOtp) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
