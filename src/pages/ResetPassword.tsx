@@ -88,9 +88,11 @@ const ResetPassword = () => {
           <CardHeader className="pb-4">
             <CardTitle className="text-xl font-display">New Password</CardTitle>
             <CardDescription>
-              {isValidSession
+              {checking
+                ? "Verifying your recovery link..."
+                : isValidSession
                 ? "Enter your new password below"
-                : "Waiting for recovery link to be verified..."}
+                : "Invalid or expired recovery link. Please request a new one."}
             </CardDescription>
           </CardHeader>
           <CardContent>
