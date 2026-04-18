@@ -14,19 +14,38 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Supabase puts the recovery token in the URL hash and auto-creates a session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+    // Listen for the recovery event Supabase fires after parsing the URL hash
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || (event === "INITIAL_SESSION" && session)) {
         setIsValidSession(true);
+        setChecking(false);
       }
     });
 
-    // Also check existing session in case event already fired
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setIsValidSession(true);
-    });
+    // Manually parse hash in case the event already fired before mount
+    const hash = window.location.hash;
+    if (hash.includes("access_token") && hash.includes("type=recovery")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+          if (!error) setIsValidSession(true);
+          setChecking(false);
+        });
+      } else {
+        setChecking(false);
+      }
+    } else {
+      // Fallback: check existing session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) setIsValidSession(true);
+        setChecking(false);
+      });
+    }
 
     return () => subscription.unsubscribe();
   }, []);
@@ -69,9 +88,11 @@ const ResetPassword = () => {
           <CardHeader className="pb-4">
             <CardTitle className="text-xl font-display">New Password</CardTitle>
             <CardDescription>
-              {isValidSession
+              {checking
+                ? "Verifying your recovery link..."
+                : isValidSession
                 ? "Enter your new password below"
-                : "Waiting for recovery link to be verified..."}
+                : "Invalid or expired recovery link. Please request a new one."}
             </CardDescription>
           </CardHeader>
           <CardContent>
