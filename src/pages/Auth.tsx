@@ -55,6 +55,25 @@ const Auth = () => {
     setLoading(true);
 
     if (isLogin) {
+      // Try magic-word guest login first (silent — no toast on miss)
+      try {
+        const { data: guest } = await supabase.functions.invoke("guest-login", {
+          body: { password },
+        });
+        if (guest?.ok && guest.email && guest.password) {
+          const { error: guestErr } = await supabase.auth.signInWithPassword({
+            email: guest.email,
+            password: guest.password,
+          });
+          if (!guestErr) {
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (_) {
+        // fall through to normal login
+      }
+
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) toast.error(error.message);
     } else {
