@@ -4,6 +4,11 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.a5459423d6b84dc783b2314f0431e6fd',
   appName: 'RunCart',
   webDir: 'dist',
+  ios: {
+    contentInset: 'never',
+    scrollEnabled: true,
+    limitsNavigationsToAppBoundDomains: false,
+  },
   // Hot-reload from the Lovable sandbox during development only.
   // Set CAP_HOT_RELOAD=1 when running `npx cap run` locally.
   // For TestFlight / App Store builds, leave it unset so the app loads
