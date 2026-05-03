@@ -105,6 +105,11 @@
     @apply border-border;
   }
 
+  html, body {
+    overscroll-behavior-y: none;
+    background-color: hsl(var(--background));
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
