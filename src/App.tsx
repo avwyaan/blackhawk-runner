@@ -10,6 +10,8 @@ import Home from "./pages/Home";
 import CreateRun from "./pages/CreateRun";
 import ActiveRunFriend from "./pages/ActiveRunFriend";
 import ActiveRunRunner from "./pages/ActiveRunRunner";
+import RunTracker from "./pages/RunTracker";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import Groups from "./pages/Groups";
 import RunHistory from "./pages/RunHistory";
 import Profile from "./pages/Profile";
@@ -19,6 +21,7 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  usePushNotifications();
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
@@ -45,6 +48,7 @@ const App = () => (
             <Route path="/create-run" element={<ProtectedRoute><CreateRun /></ProtectedRoute>} />
             <Route path="/run/:runId" element={<ProtectedRoute><ActiveRunFriend /></ProtectedRoute>} />
             <Route path="/run/:runId/runner" element={<ProtectedRoute><ActiveRunRunner /></ProtectedRoute>} />
+            <Route path="/run/:runId/tracker" element={<ProtectedRoute><RunTracker /></ProtectedRoute>} />
             <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><RunHistory /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
