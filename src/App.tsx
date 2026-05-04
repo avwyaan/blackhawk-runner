@@ -10,6 +10,8 @@ import Home from "./pages/Home";
 import CreateRun from "./pages/CreateRun";
 import ActiveRunFriend from "./pages/ActiveRunFriend";
 import ActiveRunRunner from "./pages/ActiveRunRunner";
+import RunTracker from "./pages/RunTracker";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import Groups from "./pages/Groups";
 import RunHistory from "./pages/RunHistory";
 import Profile from "./pages/Profile";
@@ -31,6 +33,26 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AppRoutes() {
+  // Mounted once inside Router + AuthProvider so push listeners aren't re-registered on navigation.
+  usePushNotifications();
+  return (
+    <Routes>
+      <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/create-run" element={<ProtectedRoute><CreateRun /></ProtectedRoute>} />
+      <Route path="/run/:runId" element={<ProtectedRoute><ActiveRunFriend /></ProtectedRoute>} />
+      <Route path="/run/:runId/runner" element={<ProtectedRoute><ActiveRunRunner /></ProtectedRoute>} />
+      <Route path="/run/:runId/tracker" element={<ProtectedRoute><RunTracker /></ProtectedRoute>} />
+      <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
+      <Route path="/history" element={<ProtectedRoute><RunHistory /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -38,18 +60,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-            <Route path="/create-run" element={<ProtectedRoute><CreateRun /></ProtectedRoute>} />
-            <Route path="/run/:runId" element={<ProtectedRoute><ActiveRunFriend /></ProtectedRoute>} />
-            <Route path="/run/:runId/runner" element={<ProtectedRoute><ActiveRunRunner /></ProtectedRoute>} />
-            <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
-            <Route path="/history" element={<ProtectedRoute><RunHistory /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
