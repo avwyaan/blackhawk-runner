@@ -1,1 +1,7 @@
 project_id = "bibgyingndjsuxjifamh"
+
+[functions.notify-run-started]
+verify_jwt = false
+
+[functions.guest-login]
+verify_jwt = false

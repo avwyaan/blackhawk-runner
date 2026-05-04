@@ -63,7 +63,11 @@ const Home = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const activeRuns = runs.filter((r) => r.status === "open" || r.status === "shopping");
+  const activeRuns = runs.filter(
+    (r) =>
+      (r.status === "open" || r.status === "shopping") &&
+      !(r.runner_id !== user?.id && localStorage.getItem(`runcart:skipped:${r.id}`) === "1")
+  );
   const recentRuns = runs.filter((r) => r.status === "completed" || r.status === "closed").slice(0, 3);
 
   const getTimeLeft = (closesAt: string) => {
@@ -136,7 +140,7 @@ const Home = () => {
                 <Card
                   className="cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
                   onClick={() =>
-                    navigate(run.runner_id === user?.id ? `/run/${run.id}/runner` : `/run/${run.id}`)
+                    navigate(run.runner_id === user?.id ? `/run/${run.id}/runner` : `/run/${run.id}/tracker`)
                   }
                 >
                   <CardContent className="py-4 flex items-center justify-between">
