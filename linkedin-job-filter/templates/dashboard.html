@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Job Filter</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">&#128188;</span>
+        <h1>Job Digest</h1>
+        <span class="timestamp">{{ now }}</span>
+      </div>
+      <div class="actions">
+        <form method="post" action="/scrape" style="display:inline">
+          <button type="submit" class="btn btn-secondary">Scrape Now</button>
+        </form>
+        <form method="post" action="/mark-seen" style="display:inline">
+          <button type="submit" class="btn btn-ghost">Mark All Seen</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-num">{{ stats.today }}</span>
+        <span class="stat-label">Today</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num new">{{ stats.new }}</span>
+        <span class="stat-label">New</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">{{ stats.total }}</span>
+        <span class="stat-label">All Time</span>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="tabs">
+      <a href="/?filter=today" class="tab {% if filter == 'today' %}active{% endif %}">Today's Jobs</a>
+      <a href="/?filter=all" class="tab {% if filter == 'all' %}active{% endif %}">All Jobs</a>
+    </div>
+
+    <!-- Job list -->
+    {% if jobs %}
+    <div class="job-list">
+      {% for job in jobs %}
+      <div class="job-card {% if job.is_new %}is-new{% endif %}">
+        <div class="job-header">
+          <div>
+            <h2 class="job-title">
+              <a href="{{ job.job_url }}" target="_blank" rel="noopener">{{ job.title }}</a>
+              {% if job.is_new %}<span class="badge-new">New</span>{% endif %}
+            </h2>
+            <p class="job-meta">
+              <span class="company">{{ job.company }}</span>
+              {% if job.location %}
+              <span class="separator">·</span>
+              <span class="location">{{ job.location }}</span>
+              {% endif %}
+              {% if job.posted_date %}
+              <span class="separator">·</span>
+              <span class="date">{{ job.posted_date }}</span>
+              {% endif %}
+            </p>
+          </div>
+          <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="apply-btn">Apply</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>No jobs found yet.</p>
+      <p>Click <strong>Scrape Now</strong> to fetch today's LinkedIn postings.</p>
+    </div>
+    {% endif %}
+  </main>
+</body>
+</html>
