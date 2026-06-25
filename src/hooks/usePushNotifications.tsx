@@ -4,11 +4,8 @@ import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
-/**
- * Registers the device for APNs push notifications, persists the token in
- * `device_tokens`, and deep-links to the tracker when a notification is tapped.
- */
 export function usePushNotifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -32,20 +29,23 @@ export function usePushNotifications() {
 
     const onRegistration = PushNotifications.addListener("registration", async (token) => {
       if (!mounted) return;
-      try {
-        await supabase
-          .from("device_tokens")
-          .upsert(
-            { user_id: user.id, token: token.value, platform: Capacitor.getPlatform() },
-            { onConflict: "user_id,token" }
-          );
-      } catch (e) {
-        console.error("Failed to persist device token:", e);
-      }
+      const { error } = await supabase
+        .from("device_tokens")
+        .upsert(
+          { user_id: user.id, token: token.value, platform: Capacitor.getPlatform() },
+          { onConflict: "user_id,token" }
+        );
+      if (error) console.error("Failed to persist device token:", error);
     });
 
     const onError = PushNotifications.addListener("registrationError", (err) => {
       console.error("Push registration error:", err);
+    });
+
+    const onForeground = PushNotifications.addListener("pushNotificationReceived", (notification) => {
+      const title = notification.title ?? "RunCart";
+      const body = notification.body ?? "";
+      toast(title, { description: body });
     });
 
     const onTap = PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
@@ -59,6 +59,7 @@ export function usePushNotifications() {
       mounted = false;
       onRegistration.then((h) => h.remove());
       onError.then((h) => h.remove());
+      onForeground.then((h) => h.remove());
       onTap.then((h) => h.remove());
     };
   }, [user, navigate]);

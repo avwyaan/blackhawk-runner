@@ -105,9 +105,17 @@
     @apply border-border;
   }
 
+  html {
+    /* Prevent iOS from inflating text on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   html, body {
     overscroll-behavior-y: none;
     background-color: hsl(var(--background));
+    /* Disable double-tap zoom while keeping panning */
+    touch-action: manipulation;
   }
 
   body {
@@ -118,6 +126,12 @@
     /* Safe area padding for native apps */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Prevent iOS WKWebView from zooming in when an input is focused.
+     Any input with font-size < 16px triggers automatic zoom; this stops that. */
+  input, select, textarea {
+    font-size: max(16px, 1em);
   }
 
   h1, h2, h3, h4, h5, h6 {
