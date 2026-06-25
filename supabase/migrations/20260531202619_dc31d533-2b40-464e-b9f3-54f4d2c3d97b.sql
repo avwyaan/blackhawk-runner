@@ -14,7 +14,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  edge_url TEXT := 'https://bibgyingndjsuxjifamh.supabase.co/functions/v1/notify-item-added';
+  edge_url TEXT := 'https://dixtfwozrmeelrolxvwk.supabase.co/functions/v1/notify-item-added';
 BEGIN
   PERFORM net.http_post(
     url := edge_url,

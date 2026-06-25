@@ -1,0 +1,2 @@
+ALTER TABLE public.runs
+  ADD COLUMN IF NOT EXISTS frozen_allowed BOOLEAN NOT NULL DEFAULT true;
