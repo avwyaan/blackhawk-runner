@@ -197,7 +197,7 @@ const ActiveRunRunner = () => {
         <div className="max-w-lg mx-auto flex gap-3">
           {run.status === "open" && (
             <Button className="flex-1 h-12 font-display font-bold" onClick={() => updateRunStatus("shopping")}>
-              <ShoppingCart className="w-5 h-5 mr-2" /> Start Shopping
+              <ShoppingCart className="w-5 h-5 mr-2" /> Lock the Shopping List
             </Button>
           )}
           {run.status === "shopping" && (
@@ -207,7 +207,7 @@ const ActiveRunRunner = () => {
           )}
           {run.status === "closed" && (
             <Button className="flex-1 h-12 font-display font-bold" onClick={() => updateRunStatus("shopping")}>
-              <ShoppingCart className="w-5 h-5 mr-2" /> Start Shopping
+              <ShoppingCart className="w-5 h-5 mr-2" /> Lock the Shopping List
             </Button>
           )}
         </div>

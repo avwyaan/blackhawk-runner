@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus } from "lucide-react";
+import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2 } from "lucide-react";
+
+// Update this with your TestFlight invite link after uploading the build
+const TESTFLIGHT_LINK = "https://testflight.apple.com/v1/app/6764227177";
 import { toast } from "sonner";
 
 interface GroupInvite {
@@ -157,6 +160,24 @@ const Groups = () => {
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("Invite code copied!");
+  };
+
+  const shareInvite = async (inv: GroupInvite, groupName: string) => {
+    const message =
+      `Hey! You've been invited to join *${groupName}* on RunCart 🛒\n\n` +
+      `Here's how to get started:\n\n` +
+      `1️⃣ Download the app via TestFlight:\n${TESTFLIGHT_LINK}\n\n` +
+      `2️⃣ Open the app and tap *Sign Up*\n\n` +
+      `3️⃣ Enter your details:\n` +
+      `   • Email: ${inv.email}\n` +
+      `   • Invite code: *${inv.invite_code}*\n\n` +
+      `⚠️ This invite code is personal to you — please don't share it with anyone else.`;
+
+    if (navigator.share) {
+      await navigator.share({ text: message });
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+    }
   };
 
   const joinGroup = async () => {
@@ -350,7 +371,6 @@ const Groups = () => {
                               }))
                             }
                             placeholder="friend@example.com"
-                            className="text-sm"
                           />
                           <Button
                             size="sm"
@@ -396,14 +416,26 @@ const Groups = () => {
                                 )}
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => deleteInvite(inv.id)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              {!inv.used_at && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-primary"
+                                  onClick={() => shareInvite(inv, group.name)}
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => deleteInvite(inv.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>

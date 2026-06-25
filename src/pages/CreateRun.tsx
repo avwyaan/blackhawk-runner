@@ -5,10 +5,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Snowflake } from "lucide-react";
 import { toast } from "sonner";
 
 const CreateRun = () => {
@@ -21,6 +22,7 @@ const CreateRun = () => {
   const [note, setNote] = useState("");
   const [maxOrdersPerPerson, setMaxOrdersPerPerson] = useState("");
   const [maxTotalOrders, setMaxTotalOrders] = useState("");
+  const [frozenAllowed, setFrozenAllowed] = useState(true);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ const CreateRun = () => {
       closes_at: closesAt,
       max_orders_per_person: maxOrdersPerPerson ? parseInt(maxOrdersPerPerson) : null,
       max_total_orders: maxTotalOrders ? parseInt(maxTotalOrders) : null,
+      frozen_allowed: frozenAllowed,
     });
 
     if (error) {
@@ -129,7 +132,7 @@ const CreateRun = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="maxTotal">Max total orders</Label>
+                  <Label htmlFor="maxTotal">Max total items</Label>
                   <Input
                     id="maxTotal"
                     type="number"
@@ -141,13 +144,27 @@ const CreateRun = () => {
                 </div>
               </div>
 
+              {/* Frozen items toggle */}
+              <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Snowflake className={`w-4 h-4 ${frozenAllowed ? "text-blue-400" : "text-muted-foreground"}`} />
+                  <div>
+                    <Label className="cursor-pointer">Frozen items</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {frozenAllowed ? "Allowed — I can carry frozen goods" : "Not allowed — no frozen goods"}
+                    </p>
+                  </div>
+                </div>
+                <Switch checked={frozenAllowed} onCheckedChange={setFrozenAllowed} />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="note">Note (optional)</Label>
                 <Textarea
                   id="note"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="e.g. No frozen items, trunk is small"
+                  placeholder="e.g. Trunk is small, no bulky items"
                   rows={2}
                 />
               </div>

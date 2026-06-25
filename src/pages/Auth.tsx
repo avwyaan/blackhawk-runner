@@ -15,9 +15,10 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // OTP verification state
+  // OTP verification state (fallback if email confirmation is on)
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
@@ -50,6 +51,11 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const redeemInvite = async (code: string) => {
+    const { error } = await supabase.rpc("redeem_invite", { p_code: code.trim().toLowerCase() });
+    if (error) console.error("Failed to redeem invite:", error);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -77,26 +83,34 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) toast.error(error.message);
     } else {
-      const { error } = await supabase.auth.signUp({
-        email,
+      // Validate invite code before creating account
+      const { data: groupId, error: validateError } = await supabase.rpc("validate_invite", {
+        p_email: email.trim().toLowerCase(),
+        p_code: inviteCode.trim().toLowerCase(),
+      });
+
+      if (validateError || !groupId) {
+        toast.error("Invalid invite code for this email. Please check and try again.");
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
           data: { display_name: displayName },
-          emailRedirectTo: window.location.origin,
         },
       });
+
       if (error) {
-        if (
-          error.message?.includes("not on the invite list") ||
-          error.message?.includes("check_allowed_email") ||
-          error.message?.includes("Database error saving new user") ||
-          error.status === 500
-        ) {
-          toast.error("This email is not on the invite list. Please reach out to the admin for an invite.");
-        } else {
-          toast.error(error.message);
-        }
+        toast.error(error.message);
+      } else if (data.session) {
+        // Email confirmation is off — user is logged in immediately
+        await redeemInvite(inviteCode);
+        toast.success("Welcome to RunCart!");
       } else {
+        // Email confirmation is on — show OTP screen
         setShowOtp(true);
         setResendTimer(RESEND_COOLDOWN);
         toast.success("A verification code has been sent to your email!");
@@ -116,7 +130,8 @@ const Auth = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Account verified successfully!");
+      await redeemInvite(inviteCode);
+      toast.success("Account verified! Welcome to RunCart.");
     }
     setLoading(false);
   };
@@ -145,7 +160,6 @@ const Auth = () => {
             <h1 className="text-3xl font-bold font-display tracking-tight">Forgot Password?</h1>
             <p className="text-muted-foreground">We'll send you a link to reset it</p>
           </div>
-
           <Card className="border-0 shadow-lg">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-display">Reset your password</CardTitle>
@@ -158,6 +172,8 @@ const Auth = () => {
                   <Input
                     id="forgot-email"
                     type="email"
+                    name="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
@@ -169,7 +185,6 @@ const Auth = () => {
                   {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
                 </Button>
               </form>
-
               <button
                 onClick={() => setShowForgot(false)}
                 className="w-full text-center text-sm text-muted-foreground hover:underline mt-4"
@@ -196,7 +211,6 @@ const Auth = () => {
               Enter the 6-digit code sent to <span className="font-medium text-foreground">{email}</span>
             </p>
           </div>
-
           <Card className="border-0 shadow-lg">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-display">Verification Code</CardTitle>
@@ -215,7 +229,6 @@ const Auth = () => {
                   </InputOTPGroup>
                 </InputOTP>
               </div>
-
               <Button
                 onClick={handleVerifyOtp}
                 className="w-full h-12 text-base font-semibold"
@@ -224,7 +237,6 @@ const Auth = () => {
                 {loading ? "Verifying..." : "Verify & Create Account"}
                 {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
               </Button>
-
               <div className="text-center">
                 <button
                   onClick={handleResendOtp}
@@ -235,7 +247,6 @@ const Auth = () => {
                   {resendTimer > 0 ? `Resend code in ${resendTimer}s` : "Resend code"}
                 </button>
               </div>
-
               <button
                 onClick={() => { setShowOtp(false); setOtp(""); }}
                 className="w-full text-center text-sm text-muted-foreground hover:underline"
@@ -266,16 +277,18 @@ const Auth = () => {
               {isLogin ? "Welcome back" : "Create account"}
             </CardTitle>
             <CardDescription>
-              {isLogin ? "Sign in to your account" : "Join your friends on RunCart"}
+              {isLogin ? "Sign in to your account" : "You'll need an invite code to join"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
+                  <Label htmlFor="displayName">Your name</Label>
                   <Input
                     id="displayName"
+                    name="name"
+                    autoComplete="name"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Your name"
@@ -288,12 +301,28 @@ const Auth = () => {
                 <Input
                   id="email"
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
                 />
               </div>
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="inviteCode">Invite code</Label>
+                  <Input
+                    id="inviteCode"
+                    name="invite-code"
+                    autoComplete="off"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                    placeholder="e.g. a3f9b2c1"
+                    required={!isLogin}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
@@ -310,6 +339,8 @@ const Auth = () => {
                 <Input
                   id="password"
                   type="password"
+                  name="password"
+                  autoComplete={isLogin ? "current-password" : "new-password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"

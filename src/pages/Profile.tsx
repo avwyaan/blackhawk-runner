@@ -2,15 +2,18 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut, Moon } from "lucide-react";
 import { toast } from "sonner";
 
 const Profile = () => {
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,6 +73,21 @@ const Profile = () => {
             <Button onClick={updateProfile} disabled={loading}>
               {loading ? "Saving..." : "Save"}
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-lg">Appearance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Moon className="w-4 h-4 text-muted-foreground" />
+                <Label className="cursor-pointer">Dark Mode</Label>
+              </div>
+              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+            </div>
           </CardContent>
         </Card>
 
