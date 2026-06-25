@@ -8,7 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, LogOut, Moon } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, LogOut, Moon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Profile = () => {
@@ -17,6 +28,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -29,6 +41,19 @@ const Profile = () => {
         if (data) setDisplayName(data.display_name);
       });
   }, [user]);
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      await signOut();
+      navigate("/auth");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete account");
+      setDeleting(false);
+    }
+  };
 
   const updateProfile = async () => {
     if (!user) return;
@@ -98,6 +123,32 @@ const Profile = () => {
         >
           <LogOut className="w-4 h-4 mr-2" /> Sign Out
         </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" className="w-full text-destructive/70 hover:text-destructive">
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Account
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes your profile, all orders, and group memberships. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={deleteAccount}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Yes, delete my account"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
