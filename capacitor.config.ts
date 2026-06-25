@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.a5459423d6b84dc783b2314f0431e6fd',
+  appId: 'com.blackhawk.runcart',
   appName: 'RunCart',
   webDir: 'dist',
   ios: {
@@ -9,14 +9,13 @@ const config: CapacitorConfig = {
     scrollEnabled: true,
     limitsNavigationsToAppBoundDomains: false,
   },
-  // Hot-reload from the Lovable sandbox during development only.
-  // Set CAP_HOT_RELOAD=1 when running `npx cap run` locally.
-  // For TestFlight / App Store builds, leave it unset so the app loads
-  // the bundled `dist/` and works fully offline-capable.
+  // Live reload against local Vite dev server.
+  // Set CAP_HOT_RELOAD=1 when running `npx cap run ios` locally.
+  // Leave unset for TestFlight / App Store builds.
   ...(process.env.CAP_HOT_RELOAD === '1'
     ? {
         server: {
-          url: 'https://a5459423-d6b8-4dc7-83b2-314f0431e6fd.lovableproject.com?forceHideBadge=true',
+          url: 'http://localhost:5173',
           cleartext: true,
         },
       }
