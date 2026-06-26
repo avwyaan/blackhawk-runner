@@ -1,4 +1,5 @@
 // Sends APNs push notifications to all group members (except runner) when a run is created.
+// Called exclusively by a Postgres pg_net trigger — protected by X-Trigger-Secret header.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -10,8 +11,8 @@ const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8")!;
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID")!;
 const APNS_TEAM_ID = Deno.env.get("APNS_TEAM_ID")!;
 const BUNDLE_ID = "com.blackhawk.runcart";
-// Use production APNs (works for both TestFlight and App Store builds).
 const APNS_HOST = "https://api.push.apple.com";
+const TRIGGER_SECRET = Deno.env.get("TRIGGER_SECRET")!;
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
   const b64 = pem
@@ -32,7 +33,6 @@ function b64url(input: string | Uint8Array): string {
 let cachedJwt: { token: string; createdAt: number } | null = null;
 
 async function getApnsJwt(): Promise<string> {
-  // APNs JWTs are valid up to 60 min; refresh every 50 min.
   if (cachedJwt && Date.now() - cachedJwt.createdAt < 50 * 60 * 1000) {
     return cachedJwt.token;
   }
@@ -79,6 +79,14 @@ async function sendPush(deviceToken: string, jwt: string, payload: object) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // Reject any caller that doesn't present the shared trigger secret
+  if (req.headers.get("x-trigger-secret") !== TRIGGER_SECRET) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const { run_id } = await req.json();
@@ -156,7 +164,6 @@ Deno.serve(async (req) => {
       tokens.map((t) => sendPush(t.token, jwt, payload))
     );
 
-    // Clean up bad tokens (410 = unregistered).
     const badTokens = tokens.filter((_, i) => results[i].status === 410).map((t) => t.token);
     if (badTokens.length > 0) {
       await supabase.from("device_tokens").delete().in("token", badTokens);

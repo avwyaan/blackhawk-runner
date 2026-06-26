@@ -7,7 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MAGIC_WORDS = ["maggie", "sika", "eland", "rolling", "carries"];
 const GUEST_USER_ID = "11111111-1111-1111-1111-111111111111";
 const GUEST_EMAIL = "guest@runcart.local";
 
@@ -17,19 +16,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { password } = await req.json();
-    if (typeof password !== "string" || password.length === 0) {
-      return new Response(JSON.stringify({ ok: false }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { token } = await req.json();
 
-    const lower = password.toLowerCase();
-    const matches = MAGIC_WORDS.some((w) => lower.includes(w));
-    if (!matches) {
+    // Constant-time comparison to prevent timing attacks
+    const expected = Deno.env.get("GUEST_ACCESS_TOKEN") ?? "";
+    if (!token || token.length !== expected.length || token !== expected) {
       return new Response(JSON.stringify({ ok: false }), {
-        status: 200,
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -40,7 +33,6 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false, autoRefreshToken: false } },
     );
 
-    // Mint a fresh single-use password for the guest account
     const ephemeralPassword = crypto.randomUUID() + "-" + crypto.randomUUID();
 
     const { error: updateErr } = await admin.auth.admin.updateUserById(
@@ -60,11 +52,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({
-        ok: true,
-        email: GUEST_EMAIL,
-        password: ephemeralPassword,
-      }),
+      JSON.stringify({ ok: true, email: GUEST_EMAIL, password: ephemeralPassword }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

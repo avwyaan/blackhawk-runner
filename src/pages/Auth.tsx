@@ -83,18 +83,6 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) toast.error(error.message);
     } else {
-      // Validate invite code before creating account
-      const { data: groupId, error: validateError } = await supabase.rpc("validate_invite", {
-        p_email: email.trim().toLowerCase(),
-        p_code: inviteCode.trim().toLowerCase(),
-      });
-
-      if (validateError || !groupId) {
-        toast.error("Invalid invite code for this email. Please check and try again.");
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,

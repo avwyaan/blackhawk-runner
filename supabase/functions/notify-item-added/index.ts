@@ -1,4 +1,5 @@
 // Sends APNs push to the runner when a group member adds an item to a run.
+// Called exclusively by a Postgres pg_net trigger — protected by X-Trigger-Secret header.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -11,6 +12,7 @@ const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID")!;
 const APNS_TEAM_ID = Deno.env.get("APNS_TEAM_ID")!;
 const BUNDLE_ID = "com.blackhawk.runcart";
 const APNS_HOST = "https://api.push.apple.com";
+const TRIGGER_SECRET = Deno.env.get("TRIGGER_SECRET")!;
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
   const b64 = pem
@@ -70,6 +72,14 @@ async function sendPush(deviceToken: string, jwt: string, payload: object) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Reject any caller that doesn't present the shared trigger secret
+  if (req.headers.get("x-trigger-secret") !== TRIGGER_SECRET) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { order_item_id } = await req.json();
     if (!order_item_id) {
@@ -84,7 +94,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Resolve item -> order -> run + adder
     const { data: item } = await supabase
       .from("order_items")
       .select("id, item_name, quantity, order_id")
@@ -121,7 +130,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Don't notify runner about their own additions
     if (order.user_id === run.runner_id) {
       return new Response(JSON.stringify({ sent: 0, reason: "self-add" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'never',
     scrollEnabled: true,
-    limitsNavigationsToAppBoundDomains: false,
+    limitsNavigationsToAppBoundDomains: true,
   },
   // Live reload against local Vite dev server.
   // Set CAP_HOT_RELOAD=1 when running `npx cap run ios` locally.

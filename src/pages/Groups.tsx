@@ -182,39 +182,15 @@ const Groups = () => {
 
   const joinGroup = async () => {
     if (!user || !joinCode.trim()) return;
-    const { data: invite } = await supabase
-      .from("group_invites")
-      .select("id, group_id, email")
-      .eq("invite_code", joinCode.trim().toLowerCase())
-      .is("used_at", null)
-      .single();
-
-    if (!invite) {
-      toast.error("Invalid or already used invite code");
-      return;
-    }
-
-    // Check if the invite email matches the user's email
-    if (invite.email !== user.email?.toLowerCase()) {
-      toast.error("This invite code was created for a different email address");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("group_members")
-      .insert({ group_id: invite.group_id, user_id: user.id });
+    const { error } = await supabase.rpc("redeem_invite", {
+      p_code: joinCode.trim().toLowerCase(),
+    });
 
     if (error) {
-      if (error.code === "23505") toast.info("You're already in this group!");
-      else toast.error(error.message);
+      if (error.message?.includes("already")) toast.info("You're already in this group!");
+      else toast.error(error.message || "Invalid or already used invite code");
       return;
     }
-
-    // Mark invite as used
-    await supabase
-      .from("group_invites")
-      .update({ used_at: new Date().toISOString() })
-      .eq("id", invite.id);
 
     setJoinCode("");
     setShowJoin(false);

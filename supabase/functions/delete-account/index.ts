@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
 
   const userId = user.id;
 
-  // Delete in dependency order. orders CASCADE deletes order_items automatically.
+  // Delete in dependency order.
+  await supabaseAdmin.from("runs").delete().eq("runner_id", userId);
   await supabaseAdmin.from("orders").delete().eq("user_id", userId);
   await supabaseAdmin.from("device_tokens").delete().eq("user_id", userId);
   await supabaseAdmin.from("group_invites").delete().eq("created_by", userId);

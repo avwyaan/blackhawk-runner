@@ -9,5 +9,5 @@ verify_jwt = false
 [functions.guest-login]
 verify_jwt = false
 
-[functions.seed-test-users]
+[functions.privacy-policy]
 verify_jwt = false
