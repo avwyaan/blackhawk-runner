@@ -1,14 +1,15 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, CheckCheck, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import CountdownTimer from "@/components/CountdownTimer";
+import { LiveActivity, type ShoppingItem as LAItem } from "@/plugins/LiveActivity";
 
 interface OrderItemWithUser {
   id: string;
@@ -31,12 +32,25 @@ interface Run {
   note: string | null;
 }
 
+const isNative = Capacitor.isNativePlatform();
+
+function buildLAItems(items: OrderItemWithUser[]): LAItem[] {
+  return items.map((item) => ({
+    id: item.id,
+    name: item.item_name,
+    quantity: item.quantity > 1 ? `×${item.quantity}` : undefined,
+    person: item.display_name,
+    initial: (item.display_name || "?")[0].toUpperCase(),
+  }));
+}
+
 const ActiveRunRunner = () => {
   const { runId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [run, setRun] = useState<Run | null>(null);
   const [items, setItems] = useState<OrderItemWithUser[]>([]);
+  const activityStarted = useRef(false);
 
   const fetchData = useCallback(async () => {
     if (!runId) return;
@@ -44,7 +58,6 @@ const ActiveRunRunner = () => {
     const { data: runData } = await supabase.from("runs").select("*").eq("id", runId).single();
     setRun(runData);
 
-    // Get all orders for this run with user profiles
     const { data: orders } = await supabase
       .from("orders")
       .select("id, user_id, is_complete")
@@ -84,6 +97,15 @@ const ActiveRunRunner = () => {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData, runId]);
 
+  // Sync Live Activity when items change during active shopping
+  useEffect(() => {
+    if (!isNative || !activityStarted.current || !run) return;
+    if (run.status !== "shopping") return;
+
+    const checkedIds = items.filter((i) => i.is_picked_up).map((i) => i.id);
+    LiveActivity.update({ items: buildLAItems(items), checkedIds }).catch(() => {});
+  }, [items, run]);
+
   const toggleItemPickup = async (itemId: string, currentValue: boolean) => {
     await supabase.from("order_items").update({ is_picked_up: !currentValue }).eq("id", itemId);
     fetchData();
@@ -98,15 +120,49 @@ const ActiveRunRunner = () => {
     toast.success("Marked as complete!");
   };
 
-  const updateRunStatus = async (status: "open" | "closed" | "shopping" | "completed") => {
-    await supabase.from("runs").update({ status }).eq("id", runId);
+  const startShopping = async () => {
+    await supabase.from("runs").update({ status: "shopping" }).eq("id", runId);
+
+    if (isNative && run) {
+      const laItems = buildLAItems(items);
+      const checkedIds = items.filter((i) => i.is_picked_up).map((i) => i.id);
+      try {
+        await LiveActivity.start({
+          runId: run.id,
+          storeNames: run.store_names,
+          items: laItems,
+          checkedIds,
+        });
+        activityStarted.current = true;
+      } catch {
+        // Live Activity failed silently — shopping continues normally
+      }
+    }
+
     fetchData();
-    toast.success(`Run marked as ${status}`);
+    toast.success("Shopping locked in — list is on your lock screen!");
+  };
+
+  const completeRun = async () => {
+    await supabase.from("runs").update({ status: "completed" }).eq("id", runId);
+
+    if (isNative && activityStarted.current) {
+      const laItems = buildLAItems(items);
+      const checkedIds = items.filter((i) => i.is_picked_up).map((i) => i.id);
+      try {
+        await LiveActivity.end({ items: laItems, checkedIds });
+        activityStarted.current = false;
+      } catch {
+        // ignore
+      }
+    }
+
+    fetchData();
+    toast.success("Run completed!");
   };
 
   if (!run) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
 
-  // Group items by person
   const byPerson = items.reduce<Record<string, OrderItemWithUser[]>>((acc, item) => {
     const key = `${item.order_id}__${item.display_name}`;
     if (!acc[key]) acc[key] = [];
@@ -195,19 +251,14 @@ const ActiveRunRunner = () => {
       {/* Bottom actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur border-t p-4">
         <div className="max-w-lg mx-auto flex gap-3">
-          {run.status === "open" && (
-            <Button className="flex-1 h-12 font-display font-bold" onClick={() => updateRunStatus("shopping")}>
+          {(run.status === "open" || run.status === "closed") && (
+            <Button className="flex-1 h-12 font-display font-bold" onClick={startShopping}>
               <ShoppingCart className="w-5 h-5 mr-2" /> Lock the Shopping List
             </Button>
           )}
           {run.status === "shopping" && (
-            <Button className="flex-1 h-12 font-display font-bold" onClick={() => updateRunStatus("completed")}>
+            <Button className="flex-1 h-12 font-display font-bold" onClick={completeRun}>
               <CheckCheck className="w-5 h-5 mr-2" /> Complete Run
-            </Button>
-          )}
-          {run.status === "closed" && (
-            <Button className="flex-1 h-12 font-display font-bold" onClick={() => updateRunStatus("shopping")}>
-              <ShoppingCart className="w-5 h-5 mr-2" /> Lock the Shopping List
             </Button>
           )}
         </div>
