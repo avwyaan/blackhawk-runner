@@ -76,9 +76,3 @@ struct RunCartWidgets: Widget {
     }
 }
 
-#Preview(as: .systemSmall) {
-    RunCartWidgets()
-} timeline: {
-    SimpleEntry(date: .now, emoji: "😀")
-    SimpleEntry(date: .now, emoji: "🤩")
-}
