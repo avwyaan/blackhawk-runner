@@ -7,16 +7,18 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "LiveActivityPlugin"
     public let jsName = "LiveActivity"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "start",  returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "end",    returnType: CAPPluginReturnPromise),
     ]
 
-    private var currentActivity: Activity<RunCartActivityAttributes>?
+    // Stored as Any to avoid compile-time availability errors on iOS 15 deployment target.
+    // Holds Activity<RunCartActivityAttributes> at runtime on iOS 16.1+.
+    private var currentActivity: Any?
 
     @objc func start(_ call: CAPPluginCall) {
-        guard #available(iOS 16.1, *) else {
-            call.reject("Live Activities require iOS 16.1+")
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
             return
         }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -24,9 +26,9 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let runId     = call.getString("runId") ?? ""
+        let runId      = call.getString("runId") ?? ""
         let storeNames = call.getString("storeNames") ?? "Shopping"
-        let items     = parseItems(call.getArray("items") ?? [])
+        let items      = parseItems(call.getArray("items") ?? [])
         let checkedIds = (call.getArray("checkedIds") ?? []).compactMap { $0 as? String }
 
         let attributes = RunCartActivityAttributes(runId: runId, storeNames: storeNames)
@@ -37,7 +39,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         )
 
         do {
-            let activity = try Activity.request(
+            let activity = try Activity<RunCartActivityAttributes>.request(
                 attributes: attributes,
                 content: ActivityContent(state: state, staleDate: nil),
                 pushType: nil
@@ -50,11 +52,11 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func update(_ call: CAPPluginCall) {
-        guard #available(iOS 16.1, *) else {
-            call.reject("Live Activities require iOS 16.1+")
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
             return
         }
-        guard let activity = currentActivity else {
+        guard let activity = currentActivity as? Activity<RunCartActivityAttributes> else {
             call.reject("No active Live Activity")
             return
         }
@@ -76,11 +78,11 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func end(_ call: CAPPluginCall) {
-        guard #available(iOS 16.1, *) else {
-            call.reject("Live Activities require iOS 16.1+")
+        guard #available(iOS 16.2, *) else {
+            call.reject("Live Activities require iOS 16.2+")
             return
         }
-        guard let activity = currentActivity else {
+        guard let activity = currentActivity as? Activity<RunCartActivityAttributes> else {
             call.resolve()
             return
         }
@@ -105,9 +107,9 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private func parseItems(_ raw: [Any]) -> [ShoppingItem] {
         raw.compactMap { element -> ShoppingItem? in
-            guard let dict = element as? [String: Any],
-                  let id   = dict["id"]   as? String,
-                  let name = dict["name"] as? String,
+            guard let dict    = element as? [String: Any],
+                  let id      = dict["id"]      as? String,
+                  let name    = dict["name"]    as? String,
                   let person  = dict["person"]  as? String,
                   let initial = dict["initial"] as? String
             else { return nil }

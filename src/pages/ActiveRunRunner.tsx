@@ -135,7 +135,7 @@ const ActiveRunRunner = () => {
         });
         activityStarted.current = true;
       } catch {
-        // Live Activity failed silently — shopping continues normally
+        // Live Activity failed silently (iOS <16.2 or disabled) — shopping continues normally
       }
     }
 

@@ -2,13 +2,15 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
-// MARK: - Shared helpers
+// MARK: - Colors
 
 private extension Color {
-    static let rcGreen = Color(red: 0.133, green: 0.773, blue: 0.369)
-    static let rcBlue  = Color(red: 0.231, green: 0.510, blue: 0.965)
-    static let rcSurface = Color(red: 0.11, green: 0.11, blue: 0.13)
+    static let rcGreen   = Color(red: 0.133, green: 0.773, blue: 0.369)
+    static let rcBlue    = Color(red: 0.231, green: 0.510, blue: 0.965)
+    static let rcSurface = Color(red: 0.11,  green: 0.11,  blue: 0.13)
 }
+
+// MARK: - Item row (lock screen)
 
 private struct ItemRow: View {
     let item: ShoppingItem
@@ -36,7 +38,7 @@ private struct ItemRow: View {
     }
 }
 
-// MARK: - Lock Screen Banner
+// MARK: - Lock screen banner
 
 struct LockScreenView: View {
     let context: ActivityViewContext<RunCartActivityAttributes>
@@ -56,7 +58,6 @@ struct LockScreenView: View {
         }
     }
 
-    // Single-column for ≤8 items
     private var singleColumnView: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -74,7 +75,6 @@ struct LockScreenView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
-    // Two-column for >8 items
     private var twoColumnView: some View {
         let visible = Array(items.prefix(10))
         let overflow = items.count - 10
@@ -171,8 +171,9 @@ struct LockScreenView: View {
     }
 
     private var footer: some View {
-        HStack {
-            Text("\(items.count) items · \(uniquePeopleCount) people")
+        let peopleCount = Set(items.map { $0.person }).count
+        return HStack {
+            Text("\(items.count) items · \(peopleCount) people")
                 .font(.system(size: 10))
                 .foregroundColor(Color.white.opacity(0.4))
             Spacer()
@@ -181,98 +182,6 @@ struct LockScreenView: View {
         .padding(.vertical, 8)
         .overlay(alignment: .top) {
             Divider().background(Color.white.opacity(0.07))
-        }
-    }
-
-    private var uniquePeopleCount: Int {
-        Set(items.map { $0.person }).count
-    }
-}
-
-// MARK: - Dynamic Island
-
-struct CompactLeadingView: View {
-    let context: ActivityViewContext<RunCartActivityAttributes>
-    var body: some View {
-        Image(systemName: "cart.fill")
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundColor(.rcGreen)
-    }
-}
-
-struct CompactTrailingView: View {
-    let context: ActivityViewContext<RunCartActivityAttributes>
-    private var remaining: Int {
-        let checked = Set(context.state.checkedIds)
-        return context.state.items.filter { !checked.contains($0.id) }.count
-    }
-    var body: some View {
-        Text("\(remaining)")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundColor(remaining == 0 ? .rcGreen : .white)
-    }
-}
-
-struct MinimalView: View {
-    let context: ActivityViewContext<RunCartActivityAttributes>
-    var body: some View {
-        Image(systemName: context.state.isDone ? "checkmark.circle.fill" : "cart.fill")
-            .font(.system(size: 12))
-            .foregroundColor(context.state.isDone ? .rcGreen : .white)
-    }
-}
-
-struct ExpandedView: View {
-    let context: ActivityViewContext<RunCartActivityAttributes>
-    private var items: [ShoppingItem] { context.state.items }
-    private var checked: Set<String> { Set(context.state.checkedIds) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            DynamicIslandExpandedRegion(.leading) {
-                HStack(spacing: 4) {
-                    Image(systemName: "cart.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.rcGreen)
-                    Text(context.attributes.storeNames)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                }
-            }
-            DynamicIslandExpandedRegion(.trailing) {
-                let remaining = items.filter { !checked.contains($0.id) }.count
-                Text("\(remaining)/\(items.count)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.rcGreen)
-            }
-            DynamicIslandExpandedRegion(.bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(items.prefix(4)) { item in
-                        HStack(spacing: 5) {
-                            Image(systemName: checked.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 10))
-                                .foregroundColor(checked.contains(item.id) ? .rcGreen : Color.white.opacity(0.4))
-                            Text(item.name)
-                                .font(.system(size: 11))
-                                .foregroundColor(checked.contains(item.id) ? Color.white.opacity(0.35) : Color.white.opacity(0.85))
-                                .strikethrough(checked.contains(item.id))
-                                .lineLimit(1)
-                            Spacer()
-                            Text("(\(item.initial))")
-                                .font(.system(size: 9))
-                                .foregroundColor(Color.white.opacity(0.35))
-                        }
-                    }
-                    if items.count > 4 {
-                        Text("+ \(items.count - 4) more")
-                            .font(.system(size: 10))
-                            .foregroundColor(Color.white.opacity(0.35))
-                            .italic()
-                    }
-                }
-                .padding(.horizontal, 4)
-            }
         }
     }
 }
@@ -286,13 +195,63 @@ struct RunCartWidgetsLiveActivity: Widget {
                 .activityBackgroundTint(Color.rcSurface)
         } dynamicIsland: { context in
             DynamicIsland {
-                ExpandedView(context: context)
+                DynamicIslandExpandedRegion(.leading) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "cart.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.rcGreen)
+                        Text(context.attributes.storeNames)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text("\(context.state.items.filter { !Set(context.state.checkedIds).contains($0.id) }.count)/\(context.state.items.count)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.rcGreen)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    let checked = Set(context.state.checkedIds)
+                    let visible = Array(context.state.items.prefix(4))
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(visible) { item in
+                            HStack(spacing: 5) {
+                                Image(systemName: checked.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(checked.contains(item.id) ? .rcGreen : Color.white.opacity(0.4))
+                                Text(item.name)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(checked.contains(item.id) ? Color.white.opacity(0.35) : Color.white.opacity(0.85))
+                                    .strikethrough(checked.contains(item.id))
+                                    .lineLimit(1)
+                                Spacer()
+                                Text("(\(item.initial))")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(Color.white.opacity(0.35))
+                            }
+                        }
+                        if context.state.items.count > 4 {
+                            Text("+ \(context.state.items.count - 4) more")
+                                .font(.system(size: 10))
+                                .foregroundColor(Color.white.opacity(0.35))
+                                .italic()
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
             } compactLeading: {
-                CompactLeadingView(context: context)
+                Image(systemName: "cart.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.rcGreen)
             } compactTrailing: {
-                CompactTrailingView(context: context)
+                Text("\(context.state.items.filter { !Set(context.state.checkedIds).contains($0.id) }.count)")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.rcGreen)
             } minimal: {
-                MinimalView(context: context)
+                Image(systemName: context.state.isDone ? "checkmark.circle.fill" : "cart.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(context.state.isDone ? .rcGreen : .white)
             }
         }
     }
