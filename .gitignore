@@ -5,6 +5,11 @@ DEVLOG.md
 .env
 .env.*
 
+# Machine-local Claude Code settings — accumulates approved commands, some of
+# which embed access tokens. .claude/settings.json (shared allowlist) is fine
+# to track; this file is not.
+.claude/settings.local.json
+
 # Supabase CLI temp files
 supabase/.temp/
 

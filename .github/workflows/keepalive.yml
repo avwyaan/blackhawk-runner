@@ -1,0 +1,47 @@
+name: Supabase keep-alive
+
+# The Supabase free plan pauses a project after ~7 days without database
+# activity. A paused project is a total outage: DNS for <ref>.supabase.co stops
+# resolving, every fetch fails with "Load failed", and the app cannot log in.
+# This already cost one App Store rejection (Guideline 2.1(a), 2026-07-30), so
+# this job issues a real table read daily to keep the project marked active.
+#
+# Daily rather than every-3-days on purpose: GitHub may delay or drop scheduled
+# runs under load, and daily leaves ~6 days of margin against the 7-day cutoff.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase
+        env:
+          # Publishable (anon) key — safe to commit. It is already shipped inside
+          # the iOS bundle and is protected by RLS, not by secrecy.
+          SUPABASE_URL: https://dixtfwozrmeelrolxvwk.supabase.co
+          SUPABASE_KEY: sb_publishable_ivJ4FR4EGeXj9DMof_O7qg_Z9CNlTrX
+        run: |
+          set -euo pipefail
+
+          # A real table read, not a root ping — this has to touch Postgres to
+          # count as database activity.
+          code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' --max-time 30 \
+            "${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}")
+
+          echo "HTTP ${code}"
+          echo "Response: $(cat /tmp/body.txt)"
+
+          if [ "${code}" != "200" ]; then
+            echo "::error::Supabase keep-alive failed with HTTP ${code}."
+            echo "::error::If this is 000 the project is likely PAUSED — resume it"
+            echo "::error::in the Supabase dashboard before any App Store submission."
+            exit 1
+          fi
+
+          echo "Project is awake."
