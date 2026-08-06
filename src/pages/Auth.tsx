@@ -63,8 +63,10 @@ const Auth = () => {
     if (isLogin) {
       // Try magic-word guest login first (silent — no toast on miss)
       try {
+        // The function compares this against GUEST_ACCESS_TOKEN and expects the
+        // field to be named `token` — sending `password` always yields a 403.
         const { data: guest } = await supabase.functions.invoke("guest-login", {
-          body: { password },
+          body: { token: password },
         });
         if (guest?.ok && guest.email && guest.password) {
           const { error: guestErr } = await supabase.auth.signInWithPassword({
