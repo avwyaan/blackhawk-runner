@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -33,35 +34,62 @@ const statusColors: Record<string, string> = {
 const Home = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [profile, setProfile] = useState<{ display_name: string } | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles").select("display_name").eq("user_id", user!.id).single();
+      if (error) throw error;
+      return data as { display_name: string };
+    },
+  });
+
+  const { data: groups = [] } = useQuery({
+    queryKey: ["groups", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("groups").select("id, name");
+      if (error) throw error;
+      return (data ?? []) as Group[];
+    },
+  });
+
+  const { data: runs = [] } = useQuery({
+    queryKey: ["runs", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      // Bounded: the UI shows a handful of active runs and the 3 most recent.
+      // Selecting the whole table grew unbounded with the group's history.
+      const { data, error } = await supabase
+        .from("runs").select("*").order("created_at", { ascending: false }).limit(50);
+      if (error) throw error;
+      return (data ?? []) as Run[];
+    },
+  });
+
+  const groupIds = useMemo(() => groups.map((g) => g.id).sort().join(","), [groups]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !groupIds) return;
 
-    const fetchData = async () => {
-      const [{ data: profileData }, { data: groupsData }, { data: runsData }] = await Promise.all([
-        supabase.from("profiles").select("display_name").eq("user_id", user.id).single(),
-        supabase.from("groups").select("id, name"),
-        supabase.from("runs").select("*").order("created_at", { ascending: false }),
-      ]);
-      setProfile(profileData);
-      setGroups(groupsData || []);
-      setRuns(runsData || []);
-    };
-    fetchData();
-
-    // Realtime subscription for runs
+    // Scoped to the user's own groups. Previously this listened to every change
+    // on `runs` with no filter, so one write anywhere woke every connected
+    // client — and each then refetched profile, groups and runs together.
+    // Invalidating just the runs key refetches only what actually changed.
     const channel = supabase
-      .channel("runs-home")
-      .on("postgres_changes", { event: "*", schema: "public", table: "runs" }, () => {
-        fetchData();
-      })
+      .channel(`runs-home-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "runs", filter: `group_id=in.(${groupIds})` },
+        () => queryClient.invalidateQueries({ queryKey: ["runs", user.id] })
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, groupIds, queryClient]);
 
   const activeRuns = runs.filter(
     (r) =>
