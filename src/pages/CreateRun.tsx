@@ -9,8 +9,16 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ShoppingBag, Snowflake } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Snowflake, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
+
+// Local datetime-local min value — a couple minutes out so "now" doesn't get
+// rejected by the input's own min= the instant the page renders.
+const minScheduleValue = () => {
+  const d = new Date(Date.now() + 2 * 60000);
+  d.setSeconds(0, 0);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
 
 const CreateRun = () => {
   const { user } = useAuth();
@@ -23,6 +31,8 @@ const CreateRun = () => {
   const [maxOrdersPerPerson, setMaxOrdersPerPerson] = useState("");
   const [maxTotalOrders, setMaxTotalOrders] = useState("");
   const [frozenAllowed, setFrozenAllowed] = useState(true);
+  const [scheduleForLater, setScheduleForLater] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,9 +45,24 @@ const CreateRun = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !groupId || !storeNames.trim()) return;
+
+    let scheduledDate: Date | null = null;
+    if (scheduleForLater) {
+      if (!scheduledAt) {
+        toast.error("Pick a date and time for this run");
+        return;
+      }
+      scheduledDate = new Date(scheduledAt);
+      if (scheduledDate.getTime() <= Date.now()) {
+        toast.error("Scheduled time must be in the future");
+        return;
+      }
+    }
+
     setLoading(true);
 
-    const closesAt = new Date(Date.now() + parseInt(windowMinutes) * 60000).toISOString();
+    const baseTime = scheduledDate ?? new Date();
+    const closesAt = new Date(baseTime.getTime() + parseInt(windowMinutes) * 60000).toISOString();
 
     const { error } = await supabase.from("runs").insert({
       group_id: groupId,
@@ -45,6 +70,7 @@ const CreateRun = () => {
       store_names: storeNames.trim(),
       note: note.trim() || null,
       closes_at: closesAt,
+      scheduled_at: scheduledDate ? scheduledDate.toISOString() : null,
       max_orders_per_person: maxOrdersPerPerson ? parseInt(maxOrdersPerPerson) : null,
       max_total_orders: maxTotalOrders ? parseInt(maxTotalOrders) : null,
       frozen_allowed: frozenAllowed,
@@ -53,7 +79,11 @@ const CreateRun = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Run created! Your group has been notified.");
+      toast.success(
+        scheduledDate
+          ? "Run scheduled! Your group will get a reminder as it approaches."
+          : "Run created! Your group has been notified."
+      );
       navigate("/");
     }
     setLoading(false);
@@ -104,6 +134,34 @@ const CreateRun = () => {
                   required
                 />
               </div>
+
+              {/* Schedule for later toggle */}
+              <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <CalendarClock className={`w-4 h-4 ${scheduleForLater ? "text-primary" : "text-muted-foreground"}`} />
+                  <div>
+                    <Label className="cursor-pointer">Schedule for later</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {scheduleForLater ? "Group sees it as upcoming, with a reminder" : "Off — this run starts now"}
+                    </p>
+                  </div>
+                </div>
+                <Switch checked={scheduleForLater} onCheckedChange={setScheduleForLater} />
+              </div>
+
+              {scheduleForLater && (
+                <div className="space-y-2">
+                  <Label htmlFor="scheduledAt">Start time</Label>
+                  <Input
+                    id="scheduledAt"
+                    type="datetime-local"
+                    value={scheduledAt}
+                    min={minScheduleValue()}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    required={scheduleForLater}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Order Window</Label>

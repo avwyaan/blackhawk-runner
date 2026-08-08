@@ -79,9 +79,16 @@ supabase db push
 ```bash
 supabase functions deploy notify-run-started
 supabase functions deploy notify-item-added
+supabase functions deploy notify-run-status-changed
+supabase functions deploy notify-scheduled-run-reminder
+supabase functions deploy send-notification-digests
 supabase functions deploy guest-login
 supabase functions deploy seed-test-users
 ```
+
+`notify-scheduled-run-reminder` and `send-notification-digests` are invoked on a
+schedule by `pg_cron` (set up automatically by the migrations, no manual step
+needed) rather than by a per-row trigger like the others.
 
 ### 4. Set edge function secrets
 

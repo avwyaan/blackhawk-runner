@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2, EyeOff } from "lucide-react";
+import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2, EyeOff, Bell, BellOff } from "lucide-react";
 
 // Update this with your TestFlight invite link after uploading the build
 const TESTFLIGHT_LINK = "https://testflight.apple.com/v1/app/6764227177";
@@ -42,6 +42,7 @@ const Groups = () => {
   const [members, setMembers] = useState<Record<string, GroupMember[]>>({});
   const [invites, setInvites] = useState<Record<string, GroupInvite[]>>({});
   const [karma, setKarma] = useState<Record<string, number>>({});
+  const [mutedGroups, setMutedGroups] = useState<Set<string>>(new Set());
   const [newGroupName, setNewGroupName] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [inviteEmail, setInviteEmail] = useState<Record<string, string>>({});
@@ -53,6 +54,12 @@ const Groups = () => {
     if (!user) return;
     const { data } = await supabase.from("groups").select("id, name, created_by");
     setGroups(data || []);
+
+    const { data: mutes } = await supabase
+      .from("group_notification_mutes")
+      .select("group_id")
+      .eq("user_id", user.id);
+    setMutedGroups(new Set((mutes || []).map((m) => m.group_id)));
 
     if (data) {
       const results = await Promise.all(
@@ -226,6 +233,26 @@ const Groups = () => {
     fetchGroups();
   };
 
+  const toggleMute = async (groupId: string, muted: boolean) => {
+    if (!user) return;
+    if (muted) {
+      const { error } = await supabase
+        .from("group_notification_mutes")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("group_id", groupId);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Unmuted");
+    } else {
+      const { error } = await supabase
+        .from("group_notification_mutes")
+        .insert({ user_id: user.id, group_id: groupId });
+      if (error) { toast.error(error.message); return; }
+      toast.success("Muted — no more notifications from this group");
+    }
+    fetchGroups();
+  };
+
   const isCreator = (group: Group) => group.created_by === user?.id;
   const isMember = (group: Group) => (members[group.id] || []).some((m) => m.user_id === user?.id);
 
@@ -318,6 +345,7 @@ const Groups = () => {
           const creator = isCreator(group);
           const member = isMember(group);
           const overseeing = canManageGroups && !member;
+          const muted = mutedGroups.has(group.id);
 
           return (
             <Card key={group.id}>
@@ -333,9 +361,25 @@ const Groups = () => {
                       {groupMembers.length} member{groupMembers.length !== 1 ? "s" : ""}
                       {creator && " · You're the admin"}
                       {overseeing && " · Admin oversight (not a member)"}
+                      {muted && " · Muted"}
                     </p>
                   </div>
-                  <Users className="w-5 h-5 text-muted-foreground" />
+                  <div className="flex items-center gap-1">
+                    {member && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMute(group.id, muted);
+                        }}
+                      >
+                        {muted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                      </Button>
+                    )}
+                    <Users className="w-5 h-5 text-muted-foreground" />
+                  </div>
                 </div>
 
                 {overseeing && (
