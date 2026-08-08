@@ -10,6 +10,7 @@ import { ArrowLeft, CheckCheck, PackageCheck, ShoppingCart, X } from "lucide-rea
 import { toast } from "sonner";
 import CountdownTimer from "@/components/CountdownTimer";
 import { LiveActivity, type ShoppingItem as LAItem } from "@/plugins/LiveActivity";
+import { trackEvent } from "@/lib/analytics";
 
 interface OrderItemWithUser {
   id: string;
@@ -36,6 +37,7 @@ interface Run {
   status: string;
   closes_at: string;
   runner_id: string;
+  group_id: string;
   note: string | null;
 }
 
@@ -160,6 +162,7 @@ const ActiveRunRunner = () => {
       }
     }
 
+    trackEvent("run_locked", { groupId: run?.group_id });
     fetchData();
     toast.success("Shopping locked in — list is on your lock screen!");
   };
@@ -200,6 +203,7 @@ const ActiveRunRunner = () => {
       await supabase.from("runs").update({ status: "dropped_off" }).eq("id", runId);
     }
     await endLiveActivityIfNeeded();
+    trackEvent("run_finished", { groupId: run?.group_id });
     fetchData();
     toast.success("Run complete — everything's dropped off!");
   };
@@ -208,6 +212,7 @@ const ActiveRunRunner = () => {
     if (!window.confirm("Cancel this run? Everyone in the group will be notified.")) return;
     await supabase.from("runs").update({ status: "cancelled" }).eq("id", runId);
     await endLiveActivityIfNeeded();
+    trackEvent("run_cancelled", { groupId: run?.group_id });
     fetchData();
     toast.success("Run cancelled");
   };

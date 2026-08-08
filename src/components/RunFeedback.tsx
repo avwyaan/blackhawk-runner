@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThumbsUp, ThumbsDown, MessageSquarePlus } from "lucide-react";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 interface RunFeedbackProps {
   runId: string;
@@ -91,7 +92,10 @@ const RunFeedback = ({ runId, runnerId }: RunFeedbackProps) => {
       { onConflict: "run_id,rater_id" }
     );
     if (error) toast.error(error.message);
-    else toast.success(myRatingExists ? "Rating updated" : "Thanks for the feedback!");
+    else {
+      trackEvent("run_rating_submitted", { properties: { thumbs_up: myThumbs, has_comment: !!myComment.trim() } });
+      toast.success(myRatingExists ? "Rating updated" : "Thanks for the feedback!");
+    }
     setSavingRating(false);
     fetchData();
   };
@@ -104,6 +108,7 @@ const RunFeedback = ({ runId, runnerId }: RunFeedbackProps) => {
       .insert({ run_id: runId, user_id: user.id, comment: productComment.trim() });
     if (error) toast.error(error.message);
     else {
+      trackEvent("product_feedback_submitted");
       toast.success("Feedback sent");
       setProductComment("");
     }

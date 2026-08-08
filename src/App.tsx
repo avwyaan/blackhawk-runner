@@ -13,10 +13,13 @@ import ActiveRunFriend from "./pages/ActiveRunFriend";
 import ActiveRunRunner from "./pages/ActiveRunRunner";
 import RunTracker from "./pages/RunTracker";
 import { usePushNotifications } from "./hooks/usePushNotifications";
+import { useScreenTracking } from "./hooks/useScreenTracking";
+import { setAnalyticsUser } from "./lib/analytics";
 import Groups from "./pages/Groups";
 import RunHistory from "./pages/RunHistory";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +40,13 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   // Mounted once inside Router + AuthProvider so push listeners aren't re-registered on navigation.
   usePushNotifications();
+  useScreenTracking();
+
+  const { user } = useAuth();
+  useEffect(() => {
+    setAnalyticsUser(user?.id ?? null);
+  }, [user]);
+
   return (
     <Routes>
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingBag, Plus, Clock, Users, Settings, History, CalendarClock, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { trackEvent } from "@/lib/analytics";
 
 interface Run {
   id: string;
@@ -213,7 +214,10 @@ const Home = () => {
             <Button
               size="lg"
               className="h-14 px-8 rounded-full shadow-xl text-base font-display font-bold"
-              onClick={() => navigate("/create-run")}
+              onClick={() => {
+                trackEvent("tap_heading_out");
+                navigate("/create-run");
+              }}
             >
               <ShoppingBag className="w-5 h-5 mr-2" />
               I'm heading out!
