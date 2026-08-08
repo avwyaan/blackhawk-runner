@@ -14,10 +14,12 @@ const RunHistory = () => {
 
   useEffect(() => {
     if (!user) return;
+    const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
     supabase
       .from("runs")
       .select("*")
       .in("status", ["completed", "closed"])
+      .gte("created_at", cutoff)
       .order("created_at", { ascending: false })
       .then(({ data }) => setRuns(data || []));
   }, [user]);

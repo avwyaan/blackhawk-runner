@@ -14,6 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_group_optouts: {
+        Row: {
+          admin_id: string
+          created_at: string
+          group_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          group_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_group_optouts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       allowed_emails: {
         Row: {
           created_at: string
@@ -254,6 +280,7 @@ export type Database = {
         Row: {
           closes_at: string
           created_at: string
+          frozen_allowed: boolean
           group_id: string
           id: string
           max_orders_per_person: number | null
@@ -267,6 +294,7 @@ export type Database = {
         Insert: {
           closes_at: string
           created_at?: string
+          frozen_allowed?: boolean
           group_id: string
           id?: string
           max_orders_per_person?: number | null
@@ -280,6 +308,7 @@ export type Database = {
         Update: {
           closes_at?: string
           created_at?: string
+          frozen_allowed?: boolean
           group_id?: string
           id?: string
           max_orders_per_person?: number | null
@@ -323,6 +352,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_can_view_group: {
+        Args: { _admin_id: string; _group_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -333,6 +366,18 @@ export type Database = {
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
+      }
+      redeem_invite: {
+        Args: { p_code: string }
+        Returns: undefined
+      }
+      shares_group_with: {
+        Args: { _other_user_id: string; _user_id: string }
+        Returns: boolean
+      }
+      validate_invite: {
+        Args: { p_code: string; p_email: string }
+        Returns: string
       }
     }
     Enums: {

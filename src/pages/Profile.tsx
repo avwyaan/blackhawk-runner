@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +20,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, LogOut, Moon, Trash2 } from "lucide-react";
+import { ArrowLeft, LogOut, Moon, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Profile = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin, viewMode, setViewMode } = useUserRole();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
@@ -100,6 +102,33 @@ const Profile = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display text-lg">Admin Mode</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <Label className="cursor-pointer">Admin Mode</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {viewMode === "admin"
+                        ? "Group creation, invites, and oversight tools are visible"
+                        : "Browsing like a regular member"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={viewMode === "admin"}
+                  onCheckedChange={(checked) => setViewMode(checked ? "admin" : "user")}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
