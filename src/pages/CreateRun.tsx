@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ShoppingBag, Snowflake, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
@@ -34,6 +35,7 @@ const CreateRun = () => {
   const [frozenAllowed, setFrozenAllowed] = useState(true);
   const [scheduleForLater, setScheduleForLater] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [recentStores, setRecentStores] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -42,6 +44,37 @@ const CreateRun = () => {
       if (data && data.length === 1) setGroupId(data[0].id);
     });
   }, []);
+
+  // Recent/favorite stores for this group, ranked by how often they show up
+  // across past runs — no dedicated "favorites" table, just the run history
+  // we already have.
+  useEffect(() => {
+    if (!groupId) { setRecentStores([]); return; }
+    supabase
+      .from("runs")
+      .select("store_names")
+      .eq("group_id", groupId)
+      .order("created_at", { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        const counts = new Map<string, number>();
+        (data || []).forEach((r) => {
+          r.store_names
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .forEach((s) => counts.set(s, (counts.get(s) || 0) + 1));
+        });
+        const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+        setRecentStores(ranked.slice(0, 6));
+      });
+  }, [groupId]);
+
+  const addStoreChip = (name: string) => {
+    const existing = storeNames.split(",").map((s) => s.trim()).filter(Boolean);
+    if (existing.includes(name)) return;
+    setStoreNames(existing.length ? `${storeNames}, ${name}` : name);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +168,20 @@ const CreateRun = () => {
                   placeholder="e.g. Costco, Trader Joe's"
                   required
                 />
+                {recentStores.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {recentStores.map((name) => (
+                      <Badge
+                        key={name}
+                        variant="secondary"
+                        className="cursor-pointer text-xs font-normal"
+                        onClick={() => addStoreChip(name)}
+                      >
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Schedule for later toggle */}
