@@ -4,6 +4,7 @@ DEVLOG.md
 # Secrets — never commit
 .env
 .env.*
+!.env.example
 
 # Machine-local Claude Code settings — accumulates approved commands, some of
 # which embed access tokens. .claude/settings.json (shared allowlist) is fine

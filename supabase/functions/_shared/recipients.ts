@@ -42,8 +42,8 @@ export async function resolveRecipients(
       .in("user_id", candidateUserIds),
   ]);
 
-  const mutedIds = new Set((mutes || []).map((m: any) => m.user_id as string));
-  const prefMap = new Map((prefs || []).map((p: any) => [p.user_id as string, p]));
+  const mutedIds = new Set((mutes || []).map((m) => m.user_id as string));
+  const prefMap = new Map((prefs || []).map((p) => [p.user_id as string, p]));
 
   const instantUserIds: string[] = [];
   const digestUserIds: string[] = [];
