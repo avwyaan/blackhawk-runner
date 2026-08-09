@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -19,20 +20,24 @@ interface Run {
 const RunHistory = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [runs, setRuns] = useState<Run[]>([]);
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-    supabase
-      .from("runs")
-      .select("id, store_names, status, created_at, runner_id")
-      .in("status", ["completed", "closed"])
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setRuns(data || []));
-  }, [user]);
+  const { data: runs = [] } = useQuery({
+    queryKey: ["runs", "history", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("runs")
+        .select("id, store_names, status, created_at, runner_id")
+        .in("status", ["completed", "closed"])
+        .gte("created_at", cutoff)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []) as Run[];
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
