@@ -124,15 +124,26 @@ ON public.notification_queue FOR ALL TO authenticated
 USING (false) WITH CHECK (false);
 
 -- ── Run status change notifications (started / dropped off / cancelled) ──────
+-- Reads PROJECT_URL from vault rather than hardcoding it, same as
+-- notify_run_started/notify_item_added in 20260806000002_parameterize_edge_urls.sql
+-- — keeps this migration set portable across a staging project.
 CREATE OR REPLACE FUNCTION public.notify_run_status_changed()
 RETURNS TRIGGER
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
-  edge_url TEXT := 'https://dixtfwozrmeelrolxvwk.supabase.co/functions/v1/notify-run-status-changed';
+  base_url TEXT;
   secret_val TEXT;
 BEGIN
   IF NEW.status = OLD.status OR NEW.status NOT IN ('shopping', 'dropped_off', 'cancelled') THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT decrypted_secret INTO base_url
+  FROM vault.decrypted_secrets WHERE name = 'PROJECT_URL' LIMIT 1;
+
+  IF base_url IS NULL THEN
+    RAISE WARNING 'notify_run_status_changed: PROJECT_URL secret not set — skipping notification';
     RETURN NEW;
   END IF;
 
@@ -140,7 +151,7 @@ BEGIN
   FROM vault.decrypted_secrets WHERE name = 'TRIGGER_SECRET' LIMIT 1;
 
   PERFORM net.http_post(
-    url := edge_url,
+    url := base_url || '/functions/v1/notify-run-status-changed',
     headers := jsonb_build_object(
                  'Content-Type', 'application/json',
                  'x-trigger-secret', COALESCE(secret_val, '')
@@ -164,12 +175,18 @@ RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
-  edge_url TEXT := 'https://dixtfwozrmeelrolxvwk.supabase.co/functions/v1/notify-scheduled-run-reminder';
+  base_url TEXT;
   secret_val TEXT;
 BEGIN
+  SELECT decrypted_secret INTO base_url FROM vault.decrypted_secrets WHERE name = 'PROJECT_URL' LIMIT 1;
+  IF base_url IS NULL THEN
+    RAISE WARNING 'trigger_scheduled_run_reminders: PROJECT_URL secret not set — skipping';
+    RETURN;
+  END IF;
+
   SELECT decrypted_secret INTO secret_val FROM vault.decrypted_secrets WHERE name = 'TRIGGER_SECRET' LIMIT 1;
   PERFORM net.http_post(
-    url := edge_url,
+    url := base_url || '/functions/v1/notify-scheduled-run-reminder',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-trigger-secret', COALESCE(secret_val, ''))
   );
 END;
@@ -180,12 +197,18 @@ RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
-  edge_url TEXT := 'https://dixtfwozrmeelrolxvwk.supabase.co/functions/v1/send-notification-digests';
+  base_url TEXT;
   secret_val TEXT;
 BEGIN
+  SELECT decrypted_secret INTO base_url FROM vault.decrypted_secrets WHERE name = 'PROJECT_URL' LIMIT 1;
+  IF base_url IS NULL THEN
+    RAISE WARNING 'trigger_notification_digest_flush: PROJECT_URL secret not set — skipping';
+    RETURN;
+  END IF;
+
   SELECT decrypted_secret INTO secret_val FROM vault.decrypted_secrets WHERE name = 'TRIGGER_SECRET' LIMIT 1;
   PERFORM net.http_post(
-    url := edge_url,
+    url := base_url || '/functions/v1/send-notification-digests',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-trigger-secret', COALESCE(secret_val, ''))
   );
 END;
