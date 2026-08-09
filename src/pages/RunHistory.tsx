@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ChevronDown, Sparkles, ThumbsUp } from "lucide-react";
 import RunFeedback from "@/components/RunFeedback";
 import RunReactions from "@/components/RunReactions";
+import SettleUp from "@/components/SettleUp";
 
 interface Run {
   id: string;
@@ -170,6 +171,7 @@ const RunHistory = () => {
                 {isExpanded && (
                   <div className="pt-2 border-t space-y-3">
                     <RunReactions runId={run.id} />
+                    <SettleUp runId={run.id} runnerId={run.runner_id} />
                     <RunFeedback runId={run.id} runnerId={run.runner_id} />
                   </div>
                 )}

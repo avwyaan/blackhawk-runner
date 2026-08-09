@@ -469,6 +469,7 @@ export type Database = {
           is_picked_up: boolean
           item_name: string
           order_id: string
+          price_cents: number | null
           quantity: number
         }
         Insert: {
@@ -478,6 +479,7 @@ export type Database = {
           is_picked_up?: boolean
           item_name: string
           order_id: string
+          price_cents?: number | null
           quantity?: number
         }
         Update: {
@@ -487,6 +489,7 @@ export type Database = {
           is_picked_up?: boolean
           item_name?: string
           order_id?: string
+          price_cents?: number | null
           quantity?: number
         }
         Relationships: [
@@ -505,6 +508,7 @@ export type Database = {
           dropped_off_at: string | null
           id: string
           is_complete: boolean
+          paid_at: string | null
           run_id: string
           updated_at: string
           user_id: string
@@ -514,6 +518,7 @@ export type Database = {
           dropped_off_at?: string | null
           id?: string
           is_complete?: boolean
+          paid_at?: string | null
           run_id: string
           updated_at?: string
           user_id: string
@@ -523,6 +528,7 @@ export type Database = {
           dropped_off_at?: string | null
           id?: string
           is_complete?: boolean
+          paid_at?: string | null
           run_id?: string
           updated_at?: string
           user_id?: string
@@ -543,6 +549,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          payment_info: string | null
           updated_at: string
           user_id: string
         }
@@ -551,6 +558,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          payment_info?: string | null
           updated_at?: string
           user_id: string
         }
@@ -559,6 +567,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          payment_info?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -567,10 +576,13 @@ export type Database = {
       runs: {
         Row: {
           closes_at: string
+          costs_finalized_at: string | null
           created_at: string
+          delivery_fee_cents: number
           frozen_allowed: boolean
           group_id: string
           id: string
+          lump_sum_total_cents: number | null
           max_orders_per_person: number | null
           max_total_orders: number | null
           note: string | null
@@ -579,14 +591,19 @@ export type Database = {
           scheduled_reminder_sent_at: string | null
           status: Database["public"]["Enums"]["run_status"]
           store_names: string
+          tax_cents: number
+          tip_cents: number
           updated_at: string
         }
         Insert: {
           closes_at: string
+          costs_finalized_at?: string | null
           created_at?: string
+          delivery_fee_cents?: number
           frozen_allowed?: boolean
           group_id: string
           id?: string
+          lump_sum_total_cents?: number | null
           max_orders_per_person?: number | null
           max_total_orders?: number | null
           note?: string | null
@@ -595,14 +612,19 @@ export type Database = {
           scheduled_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           store_names: string
+          tax_cents?: number
+          tip_cents?: number
           updated_at?: string
         }
         Update: {
           closes_at?: string
+          costs_finalized_at?: string | null
           created_at?: string
+          delivery_fee_cents?: number
           frozen_allowed?: boolean
           group_id?: string
           id?: string
+          lump_sum_total_cents?: number | null
           max_orders_per_person?: number | null
           max_total_orders?: number | null
           note?: string | null
@@ -611,6 +633,8 @@ export type Database = {
           scheduled_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           store_names?: string
+          tax_cents?: number
+          tip_cents?: number
           updated_at?: string
         }
         Relationships: [
