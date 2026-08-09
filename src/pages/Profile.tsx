@@ -38,6 +38,7 @@ const Profile = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
+  const [paymentInfo, setPaymentInfo] = useState("");
   const [karmaTotal, setKarmaTotal] = useState(0);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,11 +48,14 @@ const Profile = () => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("display_name")
+      .select("display_name, payment_info")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data) setDisplayName(data.display_name);
+        if (data) {
+          setDisplayName(data.display_name);
+          setPaymentInfo(data.payment_info || "");
+        }
       });
     supabase
       .from("karma_totals")
@@ -96,7 +100,7 @@ const Profile = () => {
     setLoading(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName.trim() })
+      .update({ display_name: displayName.trim(), payment_info: paymentInfo.trim() || null })
       .eq("user_id", user.id);
     if (error) toast.error(error.message);
     else toast.success("Profile updated!");
@@ -130,6 +134,17 @@ const Profile = () => {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>How to pay you back</Label>
+              <Input
+                value={paymentInfo}
+                onChange={(e) => setPaymentInfo(e.target.value)}
+                placeholder="e.g. Venmo @gnesh"
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown to your group on the settle-up screen when you run. Optional.
+              </p>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="w-4 h-4 text-primary" />

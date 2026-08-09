@@ -8,6 +8,7 @@ import { ArrowLeft, ShoppingBag, Check, Clock, ShoppingCart, PackageCheck, X, Ba
 import { motion } from "framer-motion";
 import CountdownTimer from "@/components/CountdownTimer";
 import RunReactions from "@/components/RunReactions";
+import SettleUp from "@/components/SettleUp";
 
 interface Run {
   id: string;
@@ -110,6 +111,8 @@ const RunTracker = () => {
         )}
 
         <RunReactions runId={run.id} />
+
+        <SettleUp runId={run.id} runnerId={run.runner_id} />
 
         {isCancelled && (
           <Card className="bg-destructive/5 border-destructive/20">
