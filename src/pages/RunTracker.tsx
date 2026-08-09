@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ShoppingBag, Check, Clock, ShoppingCart, PackageCheck, X, Ban } from "lucide-react";
 import { motion } from "framer-motion";
 import CountdownTimer from "@/components/CountdownTimer";
+import RunReactions from "@/components/RunReactions";
 
 interface Run {
   id: string;
@@ -107,6 +108,8 @@ const RunTracker = () => {
             <CardContent className="py-3 text-sm">📝 {run.note}</CardContent>
           </Card>
         )}
+
+        <RunReactions runId={run.id} />
 
         {isCancelled && (
           <Card className="bg-destructive/5 border-destructive/20">

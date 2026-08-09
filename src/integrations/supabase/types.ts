@@ -168,6 +168,38 @@ export type Database = {
           },
         ]
       }
+      run_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_reactions_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       run_ratings: {
         Row: {
           comment: string | null
