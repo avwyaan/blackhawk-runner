@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -28,26 +29,34 @@ interface Stats {
 const RunHistory = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-
-    (async () => {
-      const { data } = await supabase
+  const { data: runs = [] } = useQuery({
+    queryKey: ["runs", "history", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
         .from("runs")
         .select("id, store_names, status, created_at, updated_at, runner_id")
         .in("status", ["dropped_off", "cancelled", "completed", "closed"])
         .gte("created_at", cutoff)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []) as Run[];
+    },
+  });
 
-      const runsData = data || [];
-      setRuns(runsData);
+  // Secondary, dependent computation (karma + ratings need a couple more
+  // network calls) — kept as its own effect rather than folded into the
+  // runs query above, which the rest of the page renders off of directly.
+  useEffect(() => {
+    if (!user) return;
 
-      const hostedRuns = runsData.filter((r) => r.runner_id === user.id);
+    (async () => {
+      const hostedRuns = runs.filter((r) => r.runner_id === user.id);
       const droppedOffHosted = hostedRuns.filter((r) => r.status === "dropped_off");
 
       const avgTurnaroundMins =
@@ -84,7 +93,7 @@ const RunHistory = () => {
         ratingUpPct,
       });
     })();
-  }, [user]);
+  }, [user, runs]);
 
   return (
     <div className="min-h-screen bg-background">
