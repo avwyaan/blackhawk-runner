@@ -254,6 +254,7 @@ export type Database = {
         Row: {
           closes_at: string
           created_at: string
+          frozen_allowed: boolean
           group_id: string
           id: string
           max_orders_per_person: number | null
@@ -267,6 +268,7 @@ export type Database = {
         Insert: {
           closes_at: string
           created_at?: string
+          frozen_allowed?: boolean
           group_id: string
           id?: string
           max_orders_per_person?: number | null
@@ -280,6 +282,7 @@ export type Database = {
         Update: {
           closes_at?: string
           created_at?: string
+          frozen_allowed?: boolean
           group_id?: string
           id?: string
           max_orders_per_person?: number | null
@@ -333,6 +336,14 @@ export type Database = {
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
+      }
+      redeem_invite: {
+        Args: { p_code: string }
+        Returns: undefined
+      }
+      validate_invite: {
+        Args: { p_code: string; p_email: string }
+        Returns: string
       }
     }
     Enums: {
