@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2 } from "lucide-react";
+import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2, EyeOff } from "lucide-react";
 
 // Update this with your TestFlight invite link after uploading the build
 const TESTFLIGHT_LINK = "https://testflight.apple.com/v1/app/6764227177";
@@ -34,6 +35,8 @@ interface Group {
 
 const Groups = () => {
   const { user } = useAuth();
+  const { isAdmin, viewMode } = useUserRole();
+  const canManageGroups = isAdmin && viewMode === "admin";
   const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>([]);
   const [members, setMembers] = useState<Record<string, GroupMember[]>>({});
@@ -198,7 +201,21 @@ const Groups = () => {
     fetchGroups();
   };
 
+  const optOutOfGroup = async (groupId: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("admin_group_optouts")
+      .insert({ admin_id: user.id, group_id: groupId });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Stopped overseeing this group");
+    fetchGroups();
+  };
+
   const isCreator = (group: Group) => group.created_by === user?.id;
+  const isMember = (group: Group) => (members[group.id] || []).some((m) => m.user_id === user?.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -213,16 +230,18 @@ const Groups = () => {
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
         <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              setShowCreate(true);
-              setShowJoin(false);
-            }}
-            variant="outline"
-            className="flex-1"
-          >
-            <Plus className="w-4 h-4 mr-2" /> Create Group
-          </Button>
+          {canManageGroups && (
+            <Button
+              onClick={() => {
+                setShowCreate(true);
+                setShowJoin(false);
+              }}
+              variant="outline"
+              className="flex-1"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Create Group
+            </Button>
+          )}
           <Button
             onClick={() => {
               setShowJoin(true);
@@ -234,6 +253,11 @@ const Groups = () => {
             <Mail className="w-4 h-4 mr-2" /> Join with Code
           </Button>
         </div>
+        {isAdmin && !canManageGroups && (
+          <p className="text-xs text-muted-foreground text-center -mt-2">
+            Switch to Admin Mode in Profile to create groups or manage invites
+          </p>
+        )}
 
         {showCreate && (
           <Card className="border-primary/30">
@@ -280,6 +304,8 @@ const Groups = () => {
           const groupMembers = members[group.id] || [];
           const groupInvites = invites[group.id] || [];
           const creator = isCreator(group);
+          const member = isMember(group);
+          const overseeing = canManageGroups && !member;
 
           return (
             <Card key={group.id}>
@@ -294,10 +320,25 @@ const Groups = () => {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {groupMembers.length} member{groupMembers.length !== 1 ? "s" : ""}
                       {creator && " · You're the admin"}
+                      {overseeing && " · Admin oversight (not a member)"}
                     </p>
                   </div>
                   <Users className="w-5 h-5 text-muted-foreground" />
                 </div>
+
+                {overseeing && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 text-muted-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      optOutOfGroup(group.id);
+                    }}
+                  >
+                    <EyeOff className="w-3.5 h-3.5 mr-1" /> Stop overseeing
+                  </Button>
+                )}
 
                 {isExpanded && (
                   <div className="space-y-4 pt-2">
@@ -312,7 +353,7 @@ const Groups = () => {
                             {m.display_name}
                             {m.user_id === group.created_by && " (admin)"}
                           </Badge>
-                          {creator && m.user_id !== user?.id && (
+                          {creator && canManageGroups && m.user_id !== user?.id && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -329,7 +370,7 @@ const Groups = () => {
                     <Separator />
 
                     {/* Invites section */}
-                    {creator && (
+                    {creator && canManageGroups && (
                       <div className="space-y-3">
                         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Invites

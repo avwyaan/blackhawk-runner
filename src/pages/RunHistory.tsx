@@ -16,10 +16,12 @@ const RunHistory = () => {
     queryKey: ["runs", "history", user?.id],
     enabled: !!user,
     queryFn: async () => {
+      const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from("runs")
         .select("*")
         .in("status", ["completed", "closed"])
+        .gte("created_at", cutoff)
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
