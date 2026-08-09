@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2, EyeOff, 
 // Update this with your TestFlight invite link after uploading the build
 const TESTFLIGHT_LINK = "https://testflight.apple.com/v1/app/6764227177";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 interface GroupInvite {
   id: string;
@@ -112,7 +113,7 @@ const Groups = () => {
 
   const createGroup = async () => {
     if (!user || !newGroupName.trim()) return;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("groups")
       .insert({ name: newGroupName.trim(), created_by: user.id })
       .select()
@@ -121,6 +122,7 @@ const Groups = () => {
       toast.error(error.message);
       return;
     }
+    trackEvent("group_created", { groupId: data?.id });
     setNewGroupName("");
     setShowCreate(false);
     toast.success("Group created!");
@@ -214,6 +216,7 @@ const Groups = () => {
       return;
     }
 
+    trackEvent("group_joined");
     setJoinCode("");
     setShowJoin(false);
     toast.success("Joined group!");

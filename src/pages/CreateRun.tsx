@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ShoppingBag, Snowflake, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 // Local datetime-local min value — a couple minutes out so "now" doesn't get
 // rejected by the input's own min= the instant the page renders.
@@ -79,6 +80,7 @@ const CreateRun = () => {
     if (error) {
       toast.error(error.message);
     } else {
+      trackEvent("run_created", { groupId, properties: { scheduled: !!scheduledDate } });
       toast.success(
         scheduledDate
           ? "Run scheduled! Your group will get a reminder as it approaches."

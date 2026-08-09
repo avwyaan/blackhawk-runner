@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import Auth from "./pages/Auth";
 import { usePushNotifications } from "./hooks/usePushNotifications";
+import { useScreenTracking } from "./hooks/useScreenTracking";
+import { setAnalyticsUser } from "./lib/analytics";
 
 // Auth stays eager — it is the first screen for a signed-out user, and the app
 // is signed out on a cold start more often than not. Everything else is split
@@ -64,6 +66,13 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   // Mounted once inside Router + AuthProvider so push listeners aren't re-registered on navigation.
   usePushNotifications();
+  useScreenTracking();
+
+  const { user } = useAuth();
+  useEffect(() => {
+    setAnalyticsUser(user?.id ?? null);
+  }, [user]);
+
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
