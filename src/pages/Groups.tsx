@@ -41,6 +41,7 @@ const Groups = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [members, setMembers] = useState<Record<string, GroupMember[]>>({});
   const [invites, setInvites] = useState<Record<string, GroupInvite[]>>({});
+  const [karma, setKarma] = useState<Record<string, number>>({});
   const [newGroupName, setNewGroupName] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [inviteEmail, setInviteEmail] = useState<Record<string, string>>({});
@@ -84,6 +85,17 @@ const Groups = () => {
 
       setMembers(Object.fromEntries(results.map((r) => [r.groupId, r.members])));
       setInvites(Object.fromEntries(results.map((r) => [r.groupId, r.invites])));
+
+      const allUserIds = [...new Set(results.flatMap((r) => r.members.map((m) => m.user_id)))];
+      if (allUserIds.length > 0) {
+        const { data: karmaRows } = await supabase
+          .from("karma_totals")
+          .select("user_id, karma_total")
+          .in("user_id", allUserIds);
+        setKarma(
+          Object.fromEntries((karmaRows || []).map((k) => [k.user_id, k.karma_total ?? 0]))
+        );
+      }
     }
   };
 
@@ -349,10 +361,15 @@ const Groups = () => {
                       </p>
                       {groupMembers.map((m) => (
                         <div key={m.user_id} className="flex items-center justify-between py-1">
-                          <Badge variant="secondary" className="text-xs">
-                            {m.display_name}
-                            {m.user_id === group.created_by && " (admin)"}
-                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="text-xs">
+                              {m.display_name}
+                              {m.user_id === group.created_by && " (admin)"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              ✨ {karma[m.user_id] ?? 0}
+                            </span>
+                          </div>
                           {creator && canManageGroups && m.user_id !== user?.id && (
                             <Button
                               variant="ghost"

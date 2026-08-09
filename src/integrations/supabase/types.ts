@@ -85,6 +85,121 @@ export type Database = {
         }
         Relationships: []
       }
+      karma_events: {
+        Row: {
+          created_at: string
+          event_type: Database["public"]["Enums"]["karma_event_type"]
+          id: string
+          order_item_id: string | null
+          points: number
+          run_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: Database["public"]["Enums"]["karma_event_type"]
+          id?: string
+          order_item_id?: string | null
+          points: number
+          run_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["karma_event_type"]
+          id?: string
+          order_item_id?: string | null
+          points?: number
+          run_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "karma_events_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "karma_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rater_id: string
+          run_id: string
+          thumbs_up: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rater_id: string
+          run_id: string
+          thumbs_up?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rater_id?: string
+          run_id?: string
+          thumbs_up?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_ratings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_product_feedback: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_product_feedback_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_invites: {
         Row: {
           created_at: string
@@ -349,7 +464,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      karma_totals: {
+        Row: {
+          karma_total: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_can_view_group: {
@@ -382,6 +503,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      karma_event_type: "run_posted" | "item_picked"
       run_status: "open" | "closed" | "shopping" | "completed"
     }
     CompositeTypes: {
@@ -511,6 +633,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      karma_event_type: ["run_posted", "item_picked"],
       run_status: ["open", "closed", "shopping", "completed"],
     },
   },

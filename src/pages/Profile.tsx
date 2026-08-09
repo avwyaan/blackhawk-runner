@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, LogOut, Moon, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, LogOut, Moon, Shield, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Profile = () => {
@@ -29,6 +29,7 @@ const Profile = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
+  const [karmaTotal, setKarmaTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -42,6 +43,12 @@ const Profile = () => {
       .then(({ data }) => {
         if (data) setDisplayName(data.display_name);
       });
+    supabase
+      .from("karma_totals")
+      .select("karma_total")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setKarmaTotal(data?.karma_total ?? 0));
   }, [user]);
 
   const deleteAccount = async () => {
@@ -96,6 +103,12 @@ const Profile = () => {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
               />
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span>
+                <span className="font-display font-semibold text-foreground">{karmaTotal}</span> karma
+              </span>
             </div>
             <Button onClick={updateProfile} disabled={loading}>
               {loading ? "Saving..." : "Save"}
