@@ -200,6 +200,106 @@ export type Database = {
           },
         ]
       }
+      group_notification_mutes: {
+        Row: {
+          created_at: string
+          group_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_notification_mutes_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          delivery_mode: string
+          notify_live_activities: boolean
+          notify_run_posted: boolean
+          notify_scheduled_runs: boolean
+          notify_status_updates: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_mode?: string
+          notify_live_activities?: boolean
+          notify_run_posted?: boolean
+          notify_scheduled_runs?: boolean
+          notify_status_updates?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_mode?: string
+          notify_live_activities?: boolean
+          notify_run_posted?: boolean
+          notify_scheduled_runs?: boolean
+          notify_status_updates?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_queue: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          id: string
+          run_id: string | null
+          sent_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          created_at?: string
+          id?: string
+          run_id?: string | null
+          sent_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          run_id?: string | null
+          sent_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_invites: {
         Row: {
           created_at: string
@@ -332,6 +432,7 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          dropped_off_at: string | null
           id: string
           is_complete: boolean
           run_id: string
@@ -340,6 +441,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dropped_off_at?: string | null
           id?: string
           is_complete?: boolean
           run_id: string
@@ -348,6 +450,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dropped_off_at?: string | null
           id?: string
           is_complete?: boolean
           run_id?: string
@@ -402,6 +505,8 @@ export type Database = {
           max_total_orders: number | null
           note: string | null
           runner_id: string
+          scheduled_at: string | null
+          scheduled_reminder_sent_at: string | null
           status: Database["public"]["Enums"]["run_status"]
           store_names: string
           updated_at: string
@@ -416,6 +521,8 @@ export type Database = {
           max_total_orders?: number | null
           note?: string | null
           runner_id: string
+          scheduled_at?: string | null
+          scheduled_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           store_names: string
           updated_at?: string
@@ -430,6 +537,8 @@ export type Database = {
           max_total_orders?: number | null
           note?: string | null
           runner_id?: string
+          scheduled_at?: string | null
+          scheduled_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           store_names?: string
           updated_at?: string
@@ -504,7 +613,13 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       karma_event_type: "run_posted" | "item_picked"
-      run_status: "open" | "closed" | "shopping" | "completed"
+      run_status:
+        | "open"
+        | "closed"
+        | "shopping"
+        | "completed"
+        | "dropped_off"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -634,7 +749,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       karma_event_type: ["run_posted", "item_picked"],
-      run_status: ["open", "closed", "shopping", "completed"],
+      run_status: ["open", "closed", "shopping", "completed", "dropped_off", "cancelled"],
     },
   },
 } as const

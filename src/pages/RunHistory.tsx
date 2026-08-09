@@ -30,7 +30,7 @@ const RunHistory = () => {
       const { data, error } = await supabase
         .from("runs")
         .select("id, store_names, status, created_at, runner_id")
-        .in("status", ["completed", "closed"])
+        .in("status", ["dropped_off", "cancelled", "completed", "closed"])
         .gte("created_at", cutoff)
         .order("created_at", { ascending: false })
         .limit(100);
