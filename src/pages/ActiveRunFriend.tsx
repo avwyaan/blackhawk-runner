@@ -47,8 +47,36 @@ const ActiveRunFriend = () => {
   // ── Edit flow state (after submit, run still open) ────────────────────────
   const [editName, setEditName] = useState("");
   const [addingDirect, setAddingDirect] = useState(false);
+  const [frequentItems, setFrequentItems] = useState<string[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // "You usually get X" — frequency-ranked from this user's own past orders,
+  // across all their groups (habits are stable regardless of which group).
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: myOrders } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      const orderIds = (myOrders || []).map((o) => o.id);
+      if (orderIds.length === 0) return;
+      const { data: items } = await supabase
+        .from("order_items")
+        .select("item_name")
+        .in("order_id", orderIds);
+      const counts = new Map<string, number>();
+      (items || []).forEach((it) => {
+        const key = it.item_name.trim();
+        if (key) counts.set(key, (counts.get(key) || 0) + 1);
+      });
+      const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+      setFrequentItems(ranked.slice(0, 8));
+    })();
+  }, [user]);
 
   const fetchData = useCallback(async () => {
     if (!runId || !user) return;
@@ -123,6 +151,12 @@ const ActiveRunFriend = () => {
     });
   };
 
+  const addDraftChip = (name: string) => {
+    const emptyIdx = draftNames.findIndex((n) => !n.trim());
+    if (emptyIdx === -1) return; // at limit, no empty slot to fill
+    handleDraftChange(emptyIdx, name);
+  };
+
   const submitOrder = async () => {
     const items = draftNames.map((n) => n.trim()).filter(Boolean);
     if (!items.length || !user || !runId) return;
@@ -179,8 +213,9 @@ const ActiveRunFriend = () => {
 
   const editAtLimit = perPersonLimit !== null && submittedItems.length >= perPersonLimit;
 
-  const addItemDirect = async () => {
-    if (!editName.trim() || !orderId) return;
+  const addItemDirect = async (nameOverride?: string) => {
+    const name = (nameOverride ?? editName).trim();
+    if (!name || !orderId) return;
     if (editAtLimit) {
       toast.error(`Max ${perPersonLimit} item${perPersonLimit !== 1 ? "s" : ""} per person`);
       return;
@@ -202,11 +237,11 @@ const ActiveRunFriend = () => {
     setAddingDirect(true);
     const { error } = await supabase.from("order_items").insert({
       order_id: orderId,
-      item_name: editName.trim(),
+      item_name: name,
       quantity: 1,
     });
     if (error) toast.error(error.message);
-    else setEditName("");
+    else if (!nameOverride) setEditName("");
     await fetchData();
     setAddingDirect(false);
   };
@@ -219,6 +254,12 @@ const ActiveRunFriend = () => {
   if (!run) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
 
   const atDraftLimit = perPersonLimit !== null && draftNames.filter((n) => n.trim()).length >= perPersonLimit;
+
+  const alreadyHave = new Set([
+    ...draftNames.map((n) => n.trim().toLowerCase()),
+    ...submittedItems.map((i) => i.item_name.trim().toLowerCase()),
+  ]);
+  const suggestionChips = frequentItems.filter((n) => !alreadyHave.has(n.toLowerCase())).slice(0, 6);
 
   return (
     <div className="min-h-screen bg-background pb-6">
@@ -320,6 +361,21 @@ const ActiveRunFriend = () => {
                   ✋ Limit reached ({perPersonLimit} item{perPersonLimit !== 1 ? "s" : ""} max).
                 </p>
               )}
+
+              {!atDraftLimit && suggestionChips.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {suggestionChips.map((name) => (
+                    <Badge
+                      key={name}
+                      variant="secondary"
+                      className="cursor-pointer text-xs font-normal"
+                      onClick={() => addDraftChip(name)}
+                    >
+                      + {name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </section>
 
             <Button
@@ -378,7 +434,7 @@ const ActiveRunFriend = () => {
                 />
                 <Button
                   size="icon"
-                  onClick={addItemDirect}
+                  onClick={() => addItemDirect()}
                   disabled={addingDirect || !editName.trim()}
                   className="flex-shrink-0"
                 >
@@ -390,6 +446,21 @@ const ActiveRunFriend = () => {
               <p className="text-xs text-muted-foreground px-1">
                 ✋ Limit reached ({perPersonLimit} item{perPersonLimit !== 1 ? "s" : ""} max).
               </p>
+            )}
+
+            {!editAtLimit && suggestionChips.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {suggestionChips.map((name) => (
+                  <Badge
+                    key={name}
+                    variant="secondary"
+                    className="cursor-pointer text-xs font-normal"
+                    onClick={() => addItemDirect(name)}
+                  >
+                    + {name}
+                  </Badge>
+                ))}
+              </div>
             )}
           </>
         )}

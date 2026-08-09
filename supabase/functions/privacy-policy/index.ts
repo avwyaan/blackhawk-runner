@@ -17,7 +17,7 @@ Deno.serve(() => {
 </head>
 <body>
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: June 2026</p>
+  <p class="updated">Last updated: August 2026</p>
 
   <p>RunCart ("the app", "we", "us") is a private group coordination app that helps people share grocery and errand lists with a designated runner. This policy explains what data we collect, why, and how you can delete it.</p>
 
@@ -28,6 +28,7 @@ Deno.serve(() => {
     <li><strong>Order items</strong> — the grocery or errand items you add to a run.</li>
     <li><strong>Device token</strong> — your device's push notification identifier, used to send you alerts when a run is started or items are updated.</li>
     <li><strong>Group membership</strong> — which group(s) you belong to within the app.</li>
+    <li><strong>In-app usage analytics</strong> — which screens you visit and which key actions you take (e.g. starting a run, submitting feedback), used only to understand how people use the app and to improve it. We do not log the content of what you type — item names, comments, notes, or similar — only the fact that an action happened.</li>
   </ul>
 
   <h2>What we don't collect</h2>
@@ -35,11 +36,11 @@ Deno.serve(() => {
     <li>Location data</li>
     <li>Contacts</li>
     <li>Payment information</li>
-    <li>Usage analytics or advertising identifiers</li>
+    <li>Advertising identifiers, and we don't use analytics for advertising or sell it to anyone</li>
   </ul>
 
   <h2>How we use your data</h2>
-  <p>All data collected is used solely to operate the app — coordinating store runs within your private group. We do not sell, share, or transfer your data to any third party, except Apple's Push Notification Service (APNs) which is used only to deliver in-app notifications to your device.</p>
+  <p>All data collected is used solely to operate the app — coordinating store runs within your private group — and, for usage analytics, to understand and improve how the app works. We do not sell, share, or transfer your data to any third party, except Apple's Push Notification Service (APNs) which is used only to deliver in-app notifications to your device.</p>
 
   <h2>Data storage</h2>
   <p>Your data is stored securely on Supabase infrastructure (hosted on AWS). All connections are encrypted via HTTPS/TLS. We do not store passwords in plain text.</p>
@@ -51,7 +52,7 @@ Deno.serve(() => {
     <li>Scroll to the bottom and tap <strong>Delete Account</strong></li>
     <li>Confirm the deletion</li>
   </ol>
-  <p>This immediately and permanently removes your email, display name, group memberships, order history, and device tokens from our servers. This action cannot be undone.</p>
+  <p>This immediately and permanently removes your email, display name, group memberships, order history, and device tokens from our servers. This action cannot be undone. Usage analytics events are disconnected from your account at the same time (the account link is removed) so any aggregate, anonymized usage data that remains can no longer be tied back to you.</p>
 
   <h2>Access is invite-only</h2>
   <p>RunCart is a closed, invite-only application. You can only create an account if you have received a personal invite code from a group administrator. We do not accept public signups.</p>

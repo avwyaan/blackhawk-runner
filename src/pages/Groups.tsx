@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2, EyeOff } from "lucide-react";
+import { ArrowLeft, Plus, Users, Copy, Trash2, Mail, UserMinus, Share2, EyeOff, Bell, BellOff } from "lucide-react";
 
 // Update this with your TestFlight invite link after uploading the build
 const TESTFLIGHT_LINK = "https://testflight.apple.com/v1/app/6764227177";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 interface GroupInvite {
   id: string;
@@ -41,6 +42,8 @@ const Groups = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [members, setMembers] = useState<Record<string, GroupMember[]>>({});
   const [invites, setInvites] = useState<Record<string, GroupInvite[]>>({});
+  const [karma, setKarma] = useState<Record<string, number>>({});
+  const [mutedGroups, setMutedGroups] = useState<Set<string>>(new Set());
   const [newGroupName, setNewGroupName] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [inviteEmail, setInviteEmail] = useState<Record<string, string>>({});
@@ -52,6 +55,12 @@ const Groups = () => {
     if (!user) return;
     const { data } = await supabase.from("groups").select("id, name, created_by");
     setGroups(data || []);
+
+    const { data: mutes } = await supabase
+      .from("group_notification_mutes")
+      .select("group_id")
+      .eq("user_id", user.id);
+    setMutedGroups(new Set((mutes || []).map((m) => m.group_id)));
 
     if (data) {
       const results = await Promise.all(
@@ -84,6 +93,17 @@ const Groups = () => {
 
       setMembers(Object.fromEntries(results.map((r) => [r.groupId, r.members])));
       setInvites(Object.fromEntries(results.map((r) => [r.groupId, r.invites])));
+
+      const allUserIds = [...new Set(results.flatMap((r) => r.members.map((m) => m.user_id)))];
+      if (allUserIds.length > 0) {
+        const { data: karmaRows } = await supabase
+          .from("karma_totals")
+          .select("user_id, karma_total")
+          .in("user_id", allUserIds);
+        setKarma(
+          Object.fromEntries((karmaRows || []).map((k) => [k.user_id, k.karma_total ?? 0]))
+        );
+      }
     }
   };
 
@@ -93,7 +113,7 @@ const Groups = () => {
 
   const createGroup = async () => {
     if (!user || !newGroupName.trim()) return;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("groups")
       .insert({ name: newGroupName.trim(), created_by: user.id })
       .select()
@@ -102,6 +122,7 @@ const Groups = () => {
       toast.error(error.message);
       return;
     }
+    trackEvent("group_created", { groupId: data?.id });
     setNewGroupName("");
     setShowCreate(false);
     toast.success("Group created!");
@@ -195,6 +216,7 @@ const Groups = () => {
       return;
     }
 
+    trackEvent("group_joined");
     setJoinCode("");
     setShowJoin(false);
     toast.success("Joined group!");
@@ -211,6 +233,26 @@ const Groups = () => {
       return;
     }
     toast.success("Stopped overseeing this group");
+    fetchGroups();
+  };
+
+  const toggleMute = async (groupId: string, muted: boolean) => {
+    if (!user) return;
+    if (muted) {
+      const { error } = await supabase
+        .from("group_notification_mutes")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("group_id", groupId);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Unmuted");
+    } else {
+      const { error } = await supabase
+        .from("group_notification_mutes")
+        .insert({ user_id: user.id, group_id: groupId });
+      if (error) { toast.error(error.message); return; }
+      toast.success("Muted — no more notifications from this group");
+    }
     fetchGroups();
   };
 
@@ -306,6 +348,7 @@ const Groups = () => {
           const creator = isCreator(group);
           const member = isMember(group);
           const overseeing = canManageGroups && !member;
+          const muted = mutedGroups.has(group.id);
 
           return (
             <Card key={group.id}>
@@ -321,9 +364,25 @@ const Groups = () => {
                       {groupMembers.length} member{groupMembers.length !== 1 ? "s" : ""}
                       {creator && " · You're the admin"}
                       {overseeing && " · Admin oversight (not a member)"}
+                      {muted && " · Muted"}
                     </p>
                   </div>
-                  <Users className="w-5 h-5 text-muted-foreground" />
+                  <div className="flex items-center gap-1">
+                    {member && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMute(group.id, muted);
+                        }}
+                      >
+                        {muted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                      </Button>
+                    )}
+                    <Users className="w-5 h-5 text-muted-foreground" />
+                  </div>
                 </div>
 
                 {overseeing && (
@@ -349,10 +408,15 @@ const Groups = () => {
                       </p>
                       {groupMembers.map((m) => (
                         <div key={m.user_id} className="flex items-center justify-between py-1">
-                          <Badge variant="secondary" className="text-xs">
-                            {m.display_name}
-                            {m.user_id === group.created_by && " (admin)"}
-                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="text-xs">
+                              {m.display_name}
+                              {m.user_id === group.created_by && " (admin)"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              ✨ {karma[m.user_id] ?? 0}
+                            </span>
+                          </div>
                           {creator && canManageGroups && m.user_id !== user?.id && (
                             <Button
                               variant="ghost"

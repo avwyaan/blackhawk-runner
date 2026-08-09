@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          group_id: string | null
+          id: string
+          properties: Json
+          screen: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          group_id?: string | null
+          id?: string
+          properties?: Json
+          screen?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          group_id?: string | null
+          id?: string
+          properties?: Json
+          screen?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_group_optouts: {
         Row: {
           admin_id: string
@@ -84,6 +122,253 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      karma_events: {
+        Row: {
+          created_at: string
+          event_type: Database["public"]["Enums"]["karma_event_type"]
+          id: string
+          order_item_id: string | null
+          points: number
+          run_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: Database["public"]["Enums"]["karma_event_type"]
+          id?: string
+          order_item_id?: string | null
+          points: number
+          run_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["karma_event_type"]
+          id?: string
+          order_item_id?: string | null
+          points?: number
+          run_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "karma_events_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "karma_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_reactions_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rater_id: string
+          run_id: string
+          thumbs_up: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rater_id: string
+          run_id: string
+          thumbs_up?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rater_id?: string
+          run_id?: string
+          thumbs_up?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_ratings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_product_feedback: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_product_feedback_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_notification_mutes: {
+        Row: {
+          created_at: string
+          group_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_notification_mutes_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          delivery_mode: string
+          notify_live_activities: boolean
+          notify_run_posted: boolean
+          notify_scheduled_runs: boolean
+          notify_status_updates: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_mode?: string
+          notify_live_activities?: boolean
+          notify_run_posted?: boolean
+          notify_scheduled_runs?: boolean
+          notify_status_updates?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_mode?: string
+          notify_live_activities?: boolean
+          notify_run_posted?: boolean
+          notify_scheduled_runs?: boolean
+          notify_status_updates?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_queue: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          id: string
+          run_id: string | null
+          sent_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          created_at?: string
+          id?: string
+          run_id?: string | null
+          sent_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          run_id?: string | null
+          sent_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_invites: {
         Row: {
@@ -184,6 +469,7 @@ export type Database = {
           is_picked_up: boolean
           item_name: string
           order_id: string
+          price_cents: number | null
           quantity: number
         }
         Insert: {
@@ -193,6 +479,7 @@ export type Database = {
           is_picked_up?: boolean
           item_name: string
           order_id: string
+          price_cents?: number | null
           quantity?: number
         }
         Update: {
@@ -202,6 +489,7 @@ export type Database = {
           is_picked_up?: boolean
           item_name?: string
           order_id?: string
+          price_cents?: number | null
           quantity?: number
         }
         Relationships: [
@@ -217,24 +505,30 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          dropped_off_at: string | null
           id: string
           is_complete: boolean
+          paid_at: string | null
           run_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          dropped_off_at?: string | null
           id?: string
           is_complete?: boolean
+          paid_at?: string | null
           run_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          dropped_off_at?: string | null
           id?: string
           is_complete?: boolean
+          paid_at?: string | null
           run_id?: string
           updated_at?: string
           user_id?: string
@@ -255,6 +549,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          payment_info: string | null
           updated_at: string
           user_id: string
         }
@@ -263,6 +558,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          payment_info?: string | null
           updated_at?: string
           user_id: string
         }
@@ -271,6 +567,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          payment_info?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -279,44 +576,65 @@ export type Database = {
       runs: {
         Row: {
           closes_at: string
+          costs_finalized_at: string | null
           created_at: string
+          delivery_fee_cents: number
           frozen_allowed: boolean
           group_id: string
           id: string
+          lump_sum_total_cents: number | null
           max_orders_per_person: number | null
           max_total_orders: number | null
           note: string | null
           runner_id: string
+          scheduled_at: string | null
+          scheduled_reminder_sent_at: string | null
           status: Database["public"]["Enums"]["run_status"]
           store_names: string
+          tax_cents: number
+          tip_cents: number
           updated_at: string
         }
         Insert: {
           closes_at: string
+          costs_finalized_at?: string | null
           created_at?: string
+          delivery_fee_cents?: number
           frozen_allowed?: boolean
           group_id: string
           id?: string
+          lump_sum_total_cents?: number | null
           max_orders_per_person?: number | null
           max_total_orders?: number | null
           note?: string | null
           runner_id: string
+          scheduled_at?: string | null
+          scheduled_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           store_names: string
+          tax_cents?: number
+          tip_cents?: number
           updated_at?: string
         }
         Update: {
           closes_at?: string
+          costs_finalized_at?: string | null
           created_at?: string
+          delivery_fee_cents?: number
           frozen_allowed?: boolean
           group_id?: string
           id?: string
+          lump_sum_total_cents?: number | null
           max_orders_per_person?: number | null
           max_total_orders?: number | null
           note?: string | null
           runner_id?: string
+          scheduled_at?: string | null
+          scheduled_reminder_sent_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           store_names?: string
+          tax_cents?: number
+          tip_cents?: number
           updated_at?: string
         }
         Relationships: [
@@ -349,7 +667,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      karma_totals: {
+        Row: {
+          karma_total: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_can_view_group: {
@@ -382,7 +706,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      run_status: "open" | "closed" | "shopping" | "completed"
+      karma_event_type: "run_posted" | "item_picked"
+      run_status:
+        | "open"
+        | "closed"
+        | "shopping"
+        | "completed"
+        | "dropped_off"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -511,7 +842,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      run_status: ["open", "closed", "shopping", "completed"],
+      karma_event_type: ["run_posted", "item_picked"],
+      run_status: ["open", "closed", "shopping", "completed", "dropped_off", "cancelled"],
     },
   },
 } as const

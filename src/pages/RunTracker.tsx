@@ -4,14 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, ShoppingBag, Check, Clock, ShoppingCart, PackageCheck, X } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Check, Clock, ShoppingCart, PackageCheck, X, Ban } from "lucide-react";
 import { motion } from "framer-motion";
 import CountdownTimer from "@/components/CountdownTimer";
+import RunReactions from "@/components/RunReactions";
+import SettleUp from "@/components/SettleUp";
 
 interface Run {
   id: string;
   store_names: string;
-  status: "open" | "closed" | "shopping" | "completed";
+  status: "open" | "closed" | "shopping" | "completed" | "dropped_off" | "cancelled";
   closes_at: string;
   runner_id: string;
   note: string | null;
@@ -21,7 +23,7 @@ const STAGES: { key: Run["status"]; label: string; icon: typeof Clock }[] = [
   { key: "open", label: "Accepting orders", icon: Clock },
   { key: "closed", label: "Orders closed", icon: PackageCheck },
   { key: "shopping", label: "Shopping in store", icon: ShoppingCart },
-  { key: "completed", label: "Run complete", icon: Check },
+  { key: "dropped_off", label: "Dropped off", icon: Check },
 ];
 
 const skipKey = (runId: string) => `runcart:skipped:${runId}`;
@@ -75,8 +77,9 @@ const RunTracker = () => {
   }
 
   const isRunner = run.runner_id === user?.id;
+  const isCancelled = run.status === "cancelled";
   const currentIdx = STAGES.findIndex((s) => s.key === run.status);
-  const isFinal = run.status === "completed";
+  const isFinal = run.status === "dropped_off";
 
   const handleSkip = () => {
     if (runId) localStorage.setItem(skipKey(runId), "1");
@@ -96,7 +99,7 @@ const RunTracker = () => {
               <p className="text-xs text-muted-foreground">{runnerName} is running</p>
             </div>
           </div>
-          {!isFinal && <CountdownTimer closesAt={run.closes_at} />}
+          {!isFinal && !isCancelled && <CountdownTimer closesAt={run.closes_at} />}
         </div>
       </header>
 
@@ -107,7 +110,25 @@ const RunTracker = () => {
           </Card>
         )}
 
+        <RunReactions runId={run.id} />
+
+        <SettleUp runId={run.id} runnerId={run.runner_id} />
+
+        {isCancelled && (
+          <Card className="bg-destructive/5 border-destructive/20">
+            <CardContent className="py-6 text-center space-y-2">
+              <Ban className="w-10 h-10 text-destructive mx-auto" />
+              <p className="font-display font-semibold">Run cancelled</p>
+              <p className="text-sm text-muted-foreground">
+                {runnerName} cancelled this run.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stages tracker */}
+        {!isCancelled && (
+        <>
         <Card>
           <CardContent className="py-6">
             <div className="space-y-5">
@@ -221,6 +242,8 @@ const RunTracker = () => {
               </p>
             </CardContent>
           </Card>
+        )}
+        </>
         )}
       </main>
     </div>

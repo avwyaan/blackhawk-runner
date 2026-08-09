@@ -1,11 +1,24 @@
-// Sends APNs push to the runner when a group member adds an item to a run.
+// Sends APNs push to group members (except the runner) when a run's status
+// changes to 'shopping' (started), 'dropped_off', or 'cancelled'.
 // Called exclusively by a Postgres pg_net trigger — protected by X-Trigger-Secret header.
-// Not gated by a dedicated category toggle (it's not one of the four requested
-// preference categories), but still respects the runner's group mute and
-// instant-vs-digest delivery mode.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders, requireTriggerSecret, sendToTokens } from "../_shared/apns.ts";
 import { resolveRecipients, enqueueDigest } from "../_shared/recipients.ts";
+
+const COPY: Record<string, (runnerName: string, storeNames: string) => { title: string; body: string }> = {
+  shopping: (runnerName, storeNames) => ({
+    title: `${runnerName} started shopping!`,
+    body: `The list for ${storeNames} is locked — no more items can be added.`,
+  }),
+  dropped_off: (runnerName, storeNames) => ({
+    title: `${runnerName} dropped everything off!`,
+    body: `Your ${storeNames} run is complete.`,
+  }),
+  cancelled: (runnerName, storeNames) => ({
+    title: `Run cancelled`,
+    body: `${runnerName} cancelled the ${storeNames} run.`,
+  }),
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -14,9 +27,9 @@ Deno.serve(async (req) => {
   if (forbidden) return forbidden;
 
   try {
-    const { order_item_id } = await req.json();
-    if (!order_item_id) {
-      return new Response(JSON.stringify({ error: "order_item_id required" }), {
+    const { run_id, status } = await req.json();
+    if (!run_id || !status || !COPY[status]) {
+      return new Response(JSON.stringify({ error: "run_id and a supported status are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -27,35 +40,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: item } = await supabase
-      .from("order_items")
-      .select("id, item_name, quantity, order_id")
-      .eq("id", order_item_id)
-      .single();
-    if (!item) {
-      return new Response(JSON.stringify({ error: "item not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: order } = await supabase
-      .from("orders")
-      .select("id, user_id, run_id")
-      .eq("id", item.order_id)
-      .single();
-    if (!order) {
-      return new Response(JSON.stringify({ error: "order not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { data: run } = await supabase
       .from("runs")
-      .select("id, store_names, runner_id, group_id, status")
-      .eq("id", order.run_id)
+      .select("id, store_names, group_id, runner_id")
+      .eq("id", run_id)
       .single();
+
     if (!run) {
       return new Response(JSON.stringify({ error: "run not found" }), {
         status: 404,
@@ -63,31 +53,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (order.user_id === run.runner_id) {
-      return new Response(JSON.stringify({ sent: 0, reason: "self-add" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: adderProfile } = await supabase
+    const { data: runnerProfile } = await supabase
       .from("profiles")
       .select("display_name")
-      .eq("user_id", order.user_id)
+      .eq("user_id", run.runner_id)
       .single();
-    const adderName = adderProfile?.display_name || "Someone";
+    const runnerName = runnerProfile?.display_name || "Someone";
 
+    const { data: members } = await supabase
+      .from("group_members")
+      .select("user_id")
+      .eq("group_id", run.group_id)
+      .neq("user_id", run.runner_id);
+
+    const candidateIds = (members || []).map((m) => m.user_id);
     const { instantUserIds, digestUserIds } = await resolveRecipients(
       supabase,
       run.group_id,
-      [run.runner_id],
-      null
+      candidateIds,
+      "status_updates"
     );
 
-    const qty = item.quantity > 1 ? `${item.quantity}× ` : "";
-    const title = `${adderName} added an item`;
-    const body = `${qty}${item.item_name} • ${run.store_names}`;
+    const { title, body } = COPY[status](runnerName, run.store_names);
 
-    await enqueueDigest(supabase, digestUserIds, run.id, "item_added", title, body);
+    await enqueueDigest(supabase, digestUserIds, run.id, `status_${status}`, title, body);
 
     if (instantUserIds.length === 0) {
       return new Response(JSON.stringify({ sent: 0, digested: digestUserIds.length, reason: "no instant recipients" }), {
@@ -98,12 +87,12 @@ Deno.serve(async (req) => {
     const { data: tokens } = await supabase
       .from("device_tokens")
       .select("token")
-      .eq("user_id", run.runner_id);
+      .in("user_id", instantUserIds);
 
     const payload = {
       aps: { alert: { title, body }, sound: "default", "mutable-content": 1 },
       run_id: run.id,
-      type: "item_added",
+      type: `status_${status}`,
     };
 
     const sent = await sendToTokens(supabase, tokens || [], payload);
@@ -113,7 +102,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
-    console.error("notify-item-added error:", e);
+    console.error("notify-run-status-changed error:", e);
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
