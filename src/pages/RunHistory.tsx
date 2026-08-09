@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,19 +11,23 @@ import { ArrowLeft } from "lucide-react";
 const RunHistory = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [runs, setRuns] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (!user) return;
-    const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-    supabase
-      .from("runs")
-      .select("*")
-      .in("status", ["completed", "closed"])
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setRuns(data || []));
-  }, [user]);
+  const { data: runs = [] } = useQuery({
+    queryKey: ["runs", "history", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("runs")
+        .select("*")
+        .in("status", ["completed", "closed"])
+        .gte("created_at", cutoff)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []) as Tables<"runs">[];
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
